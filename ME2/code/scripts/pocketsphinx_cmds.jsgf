@@ -1,0 +1,17 @@
+#JSGF V1.0;
+#charset "UTF-8";
+grammar vcm_cmds;
+
+// 10 smart-home intents (PocketSphinx / GMM-HMM grammar option, Architecture E)
+// Each alternative maps to one intent_10 class.
+public <command> =
+   #1  ( play music | play some music | play a song )
+ | #2  ( what is the weather | whats the weather | what time is it | what is the time )
+ | #3  ( turn on the light | turn on the lights | turn off the light | turn off the lights | switch on the light | switch off the light )
+ | #4  ( dim the light | dim the lights | brighten the light | set the light to red | set the light to blue | change the light color )
+ | #5  ( set a timer | set a one minute timer | set a five minute timer | set a ten minute timer )
+ | #6  ( set an alarm | set an alarm for eight | set an alarm for nine )
+ | #7  ( set the temperature | set the thermostat to twenty two | set the temperature to twenty )
+ | #8  ( pause | stop | next song | previous song | volume up | volume down | mute | unmute )
+ | #9  ( remind me | remind me to call | show my reminders | show my list | add to my list )
+ | #10 ( call mom | call dad | call john | send a message | text mom );
