@@ -1,9 +1,0 @@
-{
-  "tag": "dnn_1790585141",
-  "model": "dnn",
-  "params": 14603,
-  "onnx_latency_ms": 0.01,
-  "onnx_kb": 60.1,
-  "onnx_int8_latency_ms": 0.01,
-  "onnx_int8_kb": 22.3
-}
