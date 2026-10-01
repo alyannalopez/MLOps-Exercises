@@ -1,0 +1,20 @@
+{
+  "model": "models/crnn_1790586409_int8.onnx",
+  "n": 2883,
+  "acc": 0.9441553936871314,
+  "p50_ms": 2.9368329560384154,
+  "p95_ms": 4.9629918881692,
+  "per_intent": {
+    "REJECT": 1.0,
+    "PLAY_MUSIC": 1.0,
+    "QUESTION_SEARCH": 0.8896,
+    "LIGHTS_ON_OFF": 0.9503,
+    "DIM_COLOR_LIGHTS": 0.9302,
+    "SET_TIMER": 0.8711,
+    "SET_ALARM": 0.9484,
+    "THERMOSTAT": 0.963,
+    "MEDIA_CONTROL": 0.9406,
+    "REMINDERS_LISTS": 0.965,
+    "CALLS_MESSAGING": 0.9494
+  }
+}

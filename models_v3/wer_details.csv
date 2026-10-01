@@ -1,0 +1,109 @@
+intent,value,reference,hypothesis,wer,path
+SET_TIMER,TIMER_10s,set a timer for ten seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_10s/TIMER_10s_s68_v1_noisy.wav
+SET_TIMER,TIMER_10s,set a timer for ten seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_10s/TIMER_10s_s37_v2_noisy.wav
+SET_TIMER,TIMER_10s,set a timer for ten seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_10s/TIMER_10s_s87_v3_clean.wav
+SET_TIMER,TIMER_10s,set a timer for ten seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_10s/TIMER_10s_s51_v3_noisy.wav
+SET_TIMER,TIMER_10s,set a timer for ten seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_10s/TIMER_10s_s37_v2_clean.wav
+SET_TIMER,TIMER_10s,set a timer for ten seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_10s/TIMER_10s_s59_v3_noisy.wav
+SET_TIMER,TIMER_30s,set a timer for thirty seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_30s/TIMER_30s_s90_v3_clean.wav
+SET_TIMER,TIMER_30s,set a timer for thirty seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_30s/TIMER_30s_s59_v2_clean.wav
+SET_TIMER,TIMER_30s,set a timer for thirty seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_30s/TIMER_30s_s32_v3_noisy.wav
+SET_TIMER,TIMER_30s,set a timer for thirty seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_30s/TIMER_30s_s77_v1_clean.wav
+SET_TIMER,TIMER_30s,set a timer for thirty seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_30s/TIMER_30s_s38_v3_noisy.wav
+SET_TIMER,TIMER_30s,set a timer for thirty seconds,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_30s/TIMER_30s_s1_v2_noisy.wav
+SET_TIMER,TIMER_1m,set a timer for one minute,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_1m/TIMER_1m_s1_v2_noisy.wav
+SET_TIMER,TIMER_1m,set a timer for one minute,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_1m/TIMER_1m_s93_v3_clean.wav
+SET_TIMER,TIMER_1m,set a timer for one minute,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_1m/TIMER_1m_s83_v2_noisy.wav
+SET_TIMER,TIMER_1m,set a timer for one minute,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_1m/TIMER_1m_s50_v3_clean.wav
+SET_TIMER,TIMER_1m,set a timer for one minute,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_1m/TIMER_1m_s87_v2_noisy.wav
+SET_TIMER,TIMER_1m,set a timer for one minute,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TIMER_1m/TIMER_1m_s38_v2_noisy.wav
+SET_ALARM,ALARM_4_00AM,set an alarm for four in the morning,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_4_00AM/ALARM_4_00AM_s59_v2_noisy.wav
+SET_ALARM,ALARM_4_00AM,set an alarm for four in the morning,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_4_00AM/ALARM_4_00AM_s93_v2_noisy.wav
+SET_ALARM,ALARM_4_00AM,set an alarm for four in the morning,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_4_00AM/ALARM_4_00AM_s51_v2_noisy.wav
+SET_ALARM,ALARM_4_00AM,set an alarm for four in the morning,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_4_00AM/ALARM_4_00AM_s83_v1_clean.wav
+SET_ALARM,ALARM_4_00AM,set an alarm for four in the morning,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_4_00AM/ALARM_4_00AM_s77_v3_clean.wav
+SET_ALARM,ALARM_4_00AM,set an alarm for four in the morning,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_4_00AM/ALARM_4_00AM_s50_v3_noisy.wav
+SET_ALARM,ALARM_9_00PM,set an alarm for nine in the evening,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_9_00PM/ALARM_9_00PM_s38_v3_clean.wav
+SET_ALARM,ALARM_9_00PM,set an alarm for nine in the evening,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_9_00PM/ALARM_9_00PM_s7_v2_noisy.wav
+SET_ALARM,ALARM_9_00PM,set an alarm for nine in the evening,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_9_00PM/ALARM_9_00PM_s93_v2_clean.wav
+SET_ALARM,ALARM_9_00PM,set an alarm for nine in the evening,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_9_00PM/ALARM_9_00PM_s68_v3_clean.wav
+SET_ALARM,ALARM_9_00PM,set an alarm for nine in the evening,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_9_00PM/ALARM_9_00PM_s18_v1_noisy.wav
+SET_ALARM,ALARM_9_00PM,set an alarm for nine in the evening,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/ALARM_9_00PM/ALARM_9_00PM_s50_v1_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_20,set the lights to twenty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_20/BRIGHTNESS_20_s93_v1_noisy.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_20,set the lights to twenty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_20/BRIGHTNESS_20_s93_v1_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_20,set the lights to twenty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_20/BRIGHTNESS_20_s18_v1_noisy.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_20,set the lights to twenty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_20/BRIGHTNESS_20_s1_v1_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_20,set the lights to twenty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_20/BRIGHTNESS_20_s37_v2_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_20,set the lights to twenty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_20/BRIGHTNESS_20_s7_v1_noisy.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_60,set the lights to sixty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_60/BRIGHTNESS_60_s32_v3_noisy.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_60,set the lights to sixty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_60/BRIGHTNESS_60_s59_v2_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_60,set the lights to sixty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_60/BRIGHTNESS_60_s90_v1_noisy.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_60,set the lights to sixty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_60/BRIGHTNESS_60_s50_v2_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_60,set the lights to sixty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_60/BRIGHTNESS_60_s59_v3_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_60,set the lights to sixty percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_60/BRIGHTNESS_60_s68_v1_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_100,set the lights to one hundred percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_100/BRIGHTNESS_100_s93_v3_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_100,set the lights to one hundred percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_100/BRIGHTNESS_100_s37_v1_noisy.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_100,set the lights to one hundred percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_100/BRIGHTNESS_100_s59_v2_noisy.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_100,set the lights to one hundred percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_100/BRIGHTNESS_100_s68_v3_noisy.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_100,set the lights to one hundred percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_100/BRIGHTNESS_100_s7_v1_clean.wav
+DIM_COLOR_LIGHTS,BRIGHTNESS_100,set the lights to one hundred percent,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/BRIGHTNESS_100/BRIGHTNESS_100_s68_v3_clean.wav
+DIM_COLOR_LIGHTS,COLOR_RED,change the lights to red,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_RED/COLOR_RED_s59_v3_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_RED,change the lights to red,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_RED/COLOR_RED_s32_v1_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_RED,change the lights to red,Color red.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_RED/COLOR_RED_s18_v1_clean.wav
+DIM_COLOR_LIGHTS,COLOR_RED,change the lights to red,Set the lights to red.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_RED/COLOR_RED_s83_v3_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_RED,change the lights to red,Set the lights to red.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_RED/COLOR_RED_s37_v3_clean.wav
+DIM_COLOR_LIGHTS,COLOR_RED,change the lights to red,Color Red.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_RED/COLOR_RED_s93_v1_clean.wav
+DIM_COLOR_LIGHTS,COLOR_BLUE,change the lights to blue,Change the lights to blue.,0.2,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_BLUE/COLOR_BLUE_s1_v2_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_BLUE,change the lights to blue,Set the lights to blue.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_BLUE/COLOR_BLUE_s93_v3_clean.wav
+DIM_COLOR_LIGHTS,COLOR_BLUE,change the lights to blue,Set the lights to blue.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_BLUE/COLOR_BLUE_s18_v3_clean.wav
+DIM_COLOR_LIGHTS,COLOR_BLUE,change the lights to blue,Color blue.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_BLUE/COLOR_BLUE_s51_v1_clean.wav
+DIM_COLOR_LIGHTS,COLOR_BLUE,change the lights to blue,Set the lights to blue.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_BLUE/COLOR_BLUE_s32_v3_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_BLUE,change the lights to blue,Set the lights to blue.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_BLUE/COLOR_BLUE_s32_v3_clean.wav
+DIM_COLOR_LIGHTS,COLOR_GREEN,change the lights to green,Change the lights to green.,0.2,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_GREEN/COLOR_GREEN_s51_v2_clean.wav
+DIM_COLOR_LIGHTS,COLOR_GREEN,change the lights to green,Color green.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_GREEN/COLOR_GREEN_s32_v1_clean.wav
+DIM_COLOR_LIGHTS,COLOR_GREEN,change the lights to green,Color green.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_GREEN/COLOR_GREEN_s50_v1_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_GREEN,change the lights to green,Change the lights to green.,0.2,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_GREEN/COLOR_GREEN_s1_v2_clean.wav
+DIM_COLOR_LIGHTS,COLOR_GREEN,change the lights to green,Color green.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_GREEN/COLOR_GREEN_s50_v1_clean.wav
+DIM_COLOR_LIGHTS,COLOR_GREEN,change the lights to green,at the lights to green.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_GREEN/COLOR_GREEN_s68_v3_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_YELLOW,change the lights to yellow,Set the lights to yellow.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_YELLOW/COLOR_YELLOW_s18_v3_clean.wav
+DIM_COLOR_LIGHTS,COLOR_YELLOW,change the lights to yellow,Change the lights to yellow.,0.2,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_YELLOW/COLOR_YELLOW_s68_v2_clean.wav
+DIM_COLOR_LIGHTS,COLOR_YELLOW,change the lights to yellow,Change the lights to yellow.,0.2,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_YELLOW/COLOR_YELLOW_s37_v2_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_YELLOW,change the lights to yellow,Change the lights to yellow.,0.2,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_YELLOW/COLOR_YELLOW_s51_v2_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_YELLOW,change the lights to yellow,Set the lights to yellow.,0.4,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_YELLOW/COLOR_YELLOW_s50_v3_noisy.wav
+DIM_COLOR_LIGHTS,COLOR_YELLOW,change the lights to yellow,Change the lights to yellow.,0.2,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/COLOR_YELLOW/COLOR_YELLOW_s93_v2_clean.wav
+THERMOSTAT,TEMPERATURE_18,set the thermostat to eighteen degrees,Send the temperature to 18 degrees.,0.6667,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_18/TEMPERATURE_18_s90_v3_noisy.wav
+THERMOSTAT,TEMPERATURE_18,set the thermostat to eighteen degrees,Set the temperature to 18 degrees.,0.5,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_18/TEMPERATURE_18_s50_v3_noisy.wav
+THERMOSTAT,TEMPERATURE_18,set the thermostat to eighteen degrees,"Temperature, 18 degrees.",1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_18/TEMPERATURE_18_s93_v1_noisy.wav
+THERMOSTAT,TEMPERATURE_18,set the thermostat to eighteen degrees,Change the temperature to 18 degrees.,0.6667,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_18/TEMPERATURE_18_s83_v2_noisy.wav
+THERMOSTAT,TEMPERATURE_18,set the thermostat to eighteen degrees,Change the temperature to 18 degrees.,0.6667,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_18/TEMPERATURE_18_s18_v2_clean.wav
+THERMOSTAT,TEMPERATURE_18,set the thermostat to eighteen degrees,Temperature 18 degrees.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_18/TEMPERATURE_18_s37_v1_clean.wav
+THERMOSTAT,TEMPERATURE_22,set the thermostat to twenty two degrees,Change the temperature to 22 degrees.,0.7143,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_22/TEMPERATURE_22_s59_v2_noisy.wav
+THERMOSTAT,TEMPERATURE_22,set the thermostat to twenty two degrees,Change the temperature to 22 degrees.,0.7143,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_22/TEMPERATURE_22_s50_v2_noisy.wav
+THERMOSTAT,TEMPERATURE_22,set the thermostat to twenty two degrees,Set the temperature to 22 degrees.,0.5714,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_22/TEMPERATURE_22_s37_v3_noisy.wav
+THERMOSTAT,TEMPERATURE_22,set the thermostat to twenty two degrees,Change the temperature to 20 degrees.,0.7143,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_22/TEMPERATURE_22_s68_v2_noisy.wav
+THERMOSTAT,TEMPERATURE_22,set the thermostat to twenty two degrees,Set the temperature to 22 degrees.,0.5714,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_22/TEMPERATURE_22_s18_v3_noisy.wav
+THERMOSTAT,TEMPERATURE_22,set the thermostat to twenty two degrees,Change the temperature to 22 degrees.,0.7143,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_22/TEMPERATURE_22_s7_v2_clean.wav
+THERMOSTAT,TEMPERATURE_26,set the thermostat to twenty six degrees,Change the temperature to 26 degrees.,0.7143,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_26/TEMPERATURE_26_s50_v2_clean.wav
+THERMOSTAT,TEMPERATURE_26,set the thermostat to twenty six degrees,Set the temperature to 26 degrees.,0.5714,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_26/TEMPERATURE_26_s18_v3_noisy.wav
+THERMOSTAT,TEMPERATURE_26,set the thermostat to twenty six degrees,Change the temperature to 26 degrees.,0.7143,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_26/TEMPERATURE_26_s83_v2_noisy.wav
+THERMOSTAT,TEMPERATURE_26,set the thermostat to twenty six degrees,Change the temperature to 26 degrees.,0.7143,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_26/TEMPERATURE_26_s1_v2_clean.wav
+THERMOSTAT,TEMPERATURE_26,set the thermostat to twenty six degrees,Temperature 26 degrees.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_26/TEMPERATURE_26_s77_v1_noisy.wav
+THERMOSTAT,TEMPERATURE_26,set the thermostat to twenty six degrees,Temperature 26 degrees.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/TEMPERATURE_26/TEMPERATURE_26_s50_v1_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_DRINK_WATER,remind me to drink water,Create a reminder to drink water.,0.8,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_DRINK_WATER/CREATE_REMINDER_DRINK_WATER_s77_v3_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_DRINK_WATER,remind me to drink water,Remind me to drink water.,0.2,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_DRINK_WATER/CREATE_REMINDER_DRINK_WATER_s18_v2_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_DRINK_WATER,remind me to drink water,Reminder drink water.,0.8,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_DRINK_WATER/CREATE_REMINDER_DRINK_WATER_s87_v1_noisy.wav
+REMINDERS_LISTS,CREATE_REMINDER_DRINK_WATER,remind me to drink water,create a reminder to drink water.,0.8,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_DRINK_WATER/CREATE_REMINDER_DRINK_WATER_s51_v3_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_DRINK_WATER,remind me to drink water,Remind your drink water.,0.6,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_DRINK_WATER/CREATE_REMINDER_DRINK_WATER_s38_v1_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_DRINK_WATER,remind me to drink water,Create a reminder to drink water.,0.8,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_DRINK_WATER/CREATE_REMINDER_DRINK_WATER_s32_v3_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_STUDY,remind me to study,Create a reminder to study.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_STUDY/CREATE_REMINDER_STUDY_s51_v3_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_STUDY,remind me to study,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_STUDY/CREATE_REMINDER_STUDY_s83_v1_noisy.wav
+REMINDERS_LISTS,CREATE_REMINDER_STUDY,remind me to study,,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_STUDY/CREATE_REMINDER_STUDY_s68_v2_noisy.wav
+REMINDERS_LISTS,CREATE_REMINDER_STUDY,remind me to study,Remind me to study.,0.25,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_STUDY/CREATE_REMINDER_STUDY_s59_v2_noisy.wav
+REMINDERS_LISTS,CREATE_REMINDER_STUDY,remind me to study,Reminder Study.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_STUDY/CREATE_REMINDER_STUDY_s38_v1_noisy.wav
+REMINDERS_LISTS,CREATE_REMINDER_STUDY,remind me to study,Reminder Study.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_STUDY/CREATE_REMINDER_STUDY_s18_v1_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_EXERCISE,remind me to exercise,Remind your exercise.,0.75,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_EXERCISE/CREATE_REMINDER_EXERCISE_s59_v1_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_EXERCISE,remind me to exercise,Create a reminder to exercise.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_EXERCISE/CREATE_REMINDER_EXERCISE_s18_v3_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_EXERCISE,remind me to exercise,Create a reminder to exercise.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_EXERCISE/CREATE_REMINDER_EXERCISE_s93_v3_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_EXERCISE,remind me to exercise,Remind me to exercise.,0.25,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_EXERCISE/CREATE_REMINDER_EXERCISE_s18_v2_clean.wav
+REMINDERS_LISTS,CREATE_REMINDER_EXERCISE,remind me to exercise,Create a reminder to exercise.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_EXERCISE/CREATE_REMINDER_EXERCISE_s87_v3_noisy.wav
+REMINDERS_LISTS,CREATE_REMINDER_EXERCISE,remind me to exercise,Create a reminder to exercise.,1.0,/Users/yannamii/sandbox/vcm/data/raw/optionB/MEX2/OptionB/CREATE_REMINDER_EXERCISE/CREATE_REMINDER_EXERCISE_s37_v3_clean.wav

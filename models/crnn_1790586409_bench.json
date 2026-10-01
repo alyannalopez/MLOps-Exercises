@@ -1,0 +1,9 @@
+{
+  "tag": "crnn_1790586409",
+  "model": "crnn",
+  "params": 331691,
+  "onnx_latency_ms": 0.36,
+  "onnx_kb": 1297.5,
+  "onnx_int8_latency_ms": 0.41,
+  "onnx_int8_kb": 339.8
+}

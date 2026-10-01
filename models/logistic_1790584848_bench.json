@@ -1,0 +1,9 @@
+{
+  "tag": "logistic_1790584848",
+  "model": "logistic",
+  "params": 451,
+  "onnx_latency_ms": 0.01,
+  "onnx_kb": 2.1,
+  "onnx_int8_latency_ms": 0.01,
+  "onnx_int8_kb": 1.7
+}

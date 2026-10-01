@@ -1,0 +1,100 @@
+{
+  "overall_acc": 0.9441553936871314,
+  "n": 2883,
+  "latency_ms": {
+    "mean": 2.703030593895156,
+    "p50": 2.6626669568940997,
+    "p95": 3.033316449727863,
+    "p99": 3.411090646404768,
+    "max": 9.772041987162083
+  },
+  "per_intent": {
+    "PLAY_MUSIC": {
+      "correct": 89,
+      "total": 89,
+      "acc": 1.0
+    },
+    "QUESTION_SEARCH": {
+      "correct": 145,
+      "total": 163,
+      "acc": 0.8895705521472392
+    },
+    "LIGHTS_ON_OFF": {
+      "correct": 363,
+      "total": 382,
+      "acc": 0.9502617801047121
+    },
+    "DIM_COLOR_LIGHTS": {
+      "correct": 333,
+      "total": 358,
+      "acc": 0.9301675977653632
+    },
+    "SET_TIMER": {
+      "correct": 223,
+      "total": 256,
+      "acc": 0.87109375
+    },
+    "SET_ALARM": {
+      "correct": 239,
+      "total": 252,
+      "acc": 0.9484126984126984
+    },
+    "THERMOSTAT": {
+      "correct": 260,
+      "total": 270,
+      "acc": 0.9629629629629629
+    },
+    "MEDIA_CONTROL": {
+      "correct": 364,
+      "total": 387,
+      "acc": 0.9405684754521964
+    },
+    "REMINDERS_LISTS": {
+      "correct": 331,
+      "total": 343,
+      "acc": 0.9650145772594753
+    },
+    "CALLS_MESSAGING": {
+      "correct": 150,
+      "total": 158,
+      "acc": 0.9493670886075949
+    },
+    "REJECT": {
+      "correct": 225,
+      "total": 225,
+      "acc": 1.0
+    }
+  },
+  "confusion_top": {
+    "MEDIA_CONTROL->DIM_COLOR_LIGHTS": 12,
+    "DIM_COLOR_LIGHTS->MEDIA_CONTROL": 12,
+    "SET_TIMER->QUESTION_SEARCH": 9,
+    "LIGHTS_ON_OFF->MEDIA_CONTROL": 8,
+    "QUESTION_SEARCH->MEDIA_CONTROL": 7,
+    "SET_TIMER->REMINDERS_LISTS": 7,
+    "QUESTION_SEARCH->REMINDERS_LISTS": 6,
+    "THERMOSTAT->REMINDERS_LISTS": 6,
+    "SET_TIMER->MEDIA_CONTROL": 5,
+    "SET_TIMER->THERMOSTAT": 5,
+    "SET_TIMER->DIM_COLOR_LIGHTS": 5,
+    "LIGHTS_ON_OFF->DIM_COLOR_LIGHTS": 4,
+    "DIM_COLOR_LIGHTS->PLAY_MUSIC": 4,
+    "SET_ALARM->THERMOSTAT": 4,
+    "MEDIA_CONTROL->LIGHTS_ON_OFF": 4,
+    "LIGHTS_ON_OFF->REMINDERS_LISTS": 3,
+    "DIM_COLOR_LIGHTS->REMINDERS_LISTS": 3,
+    "SET_ALARM->SET_TIMER": 3,
+    "SET_ALARM->CALLS_MESSAGING": 3,
+    "MEDIA_CONTROL->REMINDERS_LISTS": 3,
+    "REMINDERS_LISTS->MEDIA_CONTROL": 3,
+    "REMINDERS_LISTS->LIGHTS_ON_OFF": 3,
+    "CALLS_MESSAGING->QUESTION_SEARCH": 3,
+    "QUESTION_SEARCH->THERMOSTAT": 2,
+    "QUESTION_SEARCH->CALLS_MESSAGING": 2,
+    "LIGHTS_ON_OFF->SET_ALARM": 2,
+    "DIM_COLOR_LIGHTS->SET_ALARM": 2,
+    "DIM_COLOR_LIGHTS->CALLS_MESSAGING": 2,
+    "SET_ALARM->MEDIA_CONTROL": 2,
+    "THERMOSTAT->SET_TIMER": 2
+  }
+}

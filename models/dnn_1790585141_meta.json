@@ -1,0 +1,13 @@
+{
+  "model": "dnn",
+  "kind": "mfcc",
+  "params": 14603,
+  "test_acc": 0.5508,
+  "val_acc": 0.5649,
+  "onnx": "/Users/yannamii/sandbox/vcm/models/dnn_1790585141.onnx",
+  "onnx_int8": "/Users/yannamii/sandbox/vcm/models/dnn_1790585141_int8.onnx",
+  "onnx_kb": 60.1,
+  "onnx_int8_kb": 22.3,
+  "feature_T": 101,
+  "feature_F": 40
+}

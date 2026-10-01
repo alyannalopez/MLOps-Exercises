@@ -1,0 +1,171 @@
+# =============================================================================
+# VCM UNIFIED LABEL MAP  —  single source of truth for the 10-intent taxonomy
+# -----------------------------------------------------------------------------
+# Every raw clip from every source is mapped to exactly one of the 10 intents
+# below (or OOV / SILENCE). Option B is the PRIMARY source (weight = 1.0);
+# all other datasets are auxiliary (lower weight, used for transfer/robustness).
+#
+# NOTE: The class "Dataset Schema" Google Sheet (gid=2013649223) is not publicly
+# readable, so this map is derived from the authoritative on-disk structure of
+# Option B + the 10-intent taxonomy in VCSD_Exercise.pdf. Edit freely to match
+# the sheet once you can open it.
+# =============================================================================
+
+taxonomy:
+  1:  PLAY_MUSIC        # "play music"
+  2:  QUESTION_SEARCH   # weather / time / general queries
+  3:  LIGHTS_ON_OFF     # "turn on/off lights"
+  4:  DIM_COLOR_LIGHTS  # "dim lights to X%" / color
+  5:  SET_TIMER         # "set a timer for X"
+  6:  SET_ALARM         # "set an alarm for X"
+  7:  THERMOSTAT        # "set temperature to X"
+  8:  MEDIA_CONTROL     # pause / stop / next / volume
+  9:  REMINDERS_LISTS   # "remind me to..." / list reminders
+  10: CALLS_MESSAGING   # "call mom" / send message
+
+# ---- PRIMARY: Option B (MEX2/OptionB) ---------------------------------------
+# Folder name == raw intent label. 32 folders -> 10 intents.
+optionB:
+  PLAY_MUSIC:            1
+  WEATHER:               2
+  TIME:                  2
+  LIGHT_ON:              3
+  LIGHT_OFF:             3
+  BRIGHTNESS_20:         4
+  BRIGHTNESS_60:         4
+  BRIGHTNESS_100:        4
+  COLOR_RED:             4
+  COLOR_GREEN:           4
+  COLOR_BLUE:            4
+  COLOR_YELLOW:          4
+  TIMER_10s:             5
+  TIMER_30s:             5
+  TIMER_1m:              5
+  ALARM_4_00AM:          6
+  ALARM_8_00AM:          6
+  ALARM_9_00PM:          6
+  TEMPERATURE_18:        7
+  TEMPERATURE_22:        7
+  TEMPERATURE_26:        7
+  PAUSE:                 8
+  STOP:                  8
+  NEXT:                  8
+  VOLUME_UP:             8
+  VOLUME_DOWN:           8
+  CREATE_REMINDER_STUDY: 9
+  CREATE_REMINDER_EXERCISE: 9
+  CREATE_REMINDER_DRINK_WATER: 9
+  LIST_REMINDERS:        9
+  CALL:                  10
+  MESSAGE:               10
+
+# ---- SNIPS Smart Lights (numeric intent id 0-5, all light control) ----------
+snips:
+  0: 4   # turn down / dim
+  1: 4   # brighten
+  2: 4   # set brightness to N
+  3: 4   # set color
+  4: 3   # turn off
+  5: 3   # turn on
+
+# ---- SLURP (numeric intent id 0-120; only a subset maps to the 10 intents) ---
+# Unlisted ids -> OOV (kept out of the command classifier; usable as negative
+# / "not-a-command" examples for silence/OOV rejection).
+slurp:
+  # 8 MEDIA_CONTROL
+  4: 8    # lower volume
+  5: 8    # mute
+  6: 8    # volume setting
+  7: 8    # volume up
+  58: 8   # play next song
+  59: 8   # turn it off (song)
+  62: 8   # shuffle playlist
+  64: 8   # resume audiobook
+  66: 8   # hear some jazz
+  67: 8   # play episode
+  68: 8   # radio channel
+  69: 8   # skip next podcast
+  86: 8   # shuffle playlist
+  97: 8   # change volume
+  # 1 PLAY_MUSIC
+  53: 1   # add song to playlist
+  # 3 LIGHTS_ON_OFF
+  41: 3   # turn lights off
+  49: 3   # turn up lights
+  # 4 DIM_COLOR_LIGHTS
+  40: 4   # lower intensity of light
+  42: 4   # brighten lights
+  45: 4   # change room lights
+  46: 4   # decrease lighting
+  48: 4   # disco lights
+  # 2 QUESTION_SEARCH
+  76: 2   # will it rain (weather)
+  98: 2   # weather updated
+  18: 2   # what time is it (tz)
+  19: 2   # what is it today (date)
+  93: 2   # what time does train leave
+  # 6 SET_ALARM
+  1: 6    # morning alarm time
+  2: 6    # remove alarms
+  3: 6    # wake me up at ten
+  # 10 CALLS_MESSAGING
+  23: 10  # call raju
+  # 9 REMINDERS_LISTS
+  54: 9   # include item to list
+  55: 9   # list the availables
+  56: 9   # remove from grocery list
+
+# ---- Speech Commands v2 (folder name == command) -----------------------------
+# 35 basic words. Maps a handful to the 10 intents; the rest are useful for
+# silence/OOV rejection and general acoustic variety.
+speechcommands:
+  yes:    8   # affirmative -> media/confirm
+  no:     8
+  up:     8   # volume up
+  down:   8   # volume down
+  left:   8
+  right:  8
+  on:     3   # light on
+  off:    3   # light off
+  go:     8
+  stop:   8
+  zero:   8
+  one:    8
+  two:    8
+  three:  8
+  four:   8
+  five:   8
+  six:    8
+  seven:  8
+  eight:  8
+  nine:   8
+  house:  3
+  tree:   4
+  go:     8
+  wow:    8
+  sheila: 8
+  dog:    8
+  cat:    8
+  bird:   8
+  water:  8
+  mouse:  8
+  bed:    8
+  welcome: 8
+  # (unmapped commands -> OOV)
+
+# ---- FLEURS fil_ph & LibriSpeech --------------------------------------------
+# General speech, NO command intent. Used only for:
+#   * acoustic pretraining / transfer (LibriSpeech)
+#   * Filipino-English acoustic diversity (FLEURS)
+# All clips labelled OOV (do NOT enter the 10-way command classifier).
+fleurs:      { _default: OOV }
+librispeech: { _default: OOV }
+
+# ---- Auxiliary weights (for weighted sampling / loss) ------------------------
+weights:
+  optionB:       1.0
+  snips:         0.5
+  slurp:         0.5
+  speechcommands: 0.3
+  fleurs:        0.1
+  librispeech:   0.1

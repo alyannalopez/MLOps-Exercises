@@ -1,0 +1,13 @@
+{
+  "model": "logistic",
+  "kind": "mfcc",
+  "params": 451,
+  "test_acc": 0.4533,
+  "val_acc": 0.4622,
+  "onnx": "/Users/yannamii/sandbox/vcm/models/logistic_1790584848.onnx",
+  "onnx_int8": "/Users/yannamii/sandbox/vcm/models/logistic_1790584848_int8.onnx",
+  "onnx_kb": 2.1,
+  "onnx_int8_kb": 1.7,
+  "feature_T": 101,
+  "feature_F": 40
+}
