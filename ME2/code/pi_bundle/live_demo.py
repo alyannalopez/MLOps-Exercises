@@ -149,10 +149,6 @@ def main():
                     help="comma-separated wakeword models (default: all five)")
     ap.add_argument("--wake-threshold", type=float, default=0.5,
                     help="wakeword detection threshold 0-1 (default: 0.5)")
-    ap.add_argument("--anti-tv", action="store_true",
-                    help="reject captured commands that aren't real commands "
-                         "(filters out TV/radio/ambient speech via whisper.cpp). "
-                         "Requires the ASR model; falls back silently if absent.")
     a = ap.parse_args()
 
     global _ASR_MODEL
@@ -178,21 +174,9 @@ def main():
     if a.wakeword:
         from wakeword import WakeGate
         wake_names = [w.strip() for w in a.wake.split(",") if w.strip()]
-        # Optional ASR gate to reject TV/ambient speech (needs whisper.cpp).
-        transcriber = None
-        if a.anti_tv:
-            transcriber = _get_transcriber()
-            if transcriber.available:
-                print("Anti-TV gate ON: commands are ASR-filtered "
-                      "(non-command audio is ignored).")
-            else:
-                print("[warn] --anti-tv requested but whisper.cpp/model not "
-                      "found; falling back to energy-only capture.")
-                transcriber = None
         gate = WakeGate(wakeword_names=wake_names,
                         threshold=a.wake_threshold,
-                        quiet=a.quiet,
-                        transcriber=transcriber)
+                        quiet=a.quiet)
         print(f"Wakeword active. Say one of: {', '.join(wake_names)}")
         print("Then speak your command. Ctrl-C to quit.\n")
     else:
