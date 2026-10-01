@@ -1,0 +1,17 @@
+intent,utterance,example
+play_music,play music,Play music
+weather,whats the weather,What's the weather
+time,what time is it,What time is it
+lights_on,turn on lights,Turn on lights
+lights_off,turn off lights,Turn off lights
+dim_lights,dim lights to X percent,Dim lights to fifty percent
+set_timer,set a timer for X minutes,Set a timer for five minutes
+set_alarm,set an alarm for X am,Set an alarm for seven am
+set_temperature,set temperature to X degrees,Set temperature to twenty two degrees
+media_control,pause,Pause
+media_control,stop,Stop
+media_control,next,Next
+media_control,volume up,Volume up
+media_control,volume down,Volume down
+remind_me,remind me to,Remind me to buy groceries
+call_someone,call mom,Call mom

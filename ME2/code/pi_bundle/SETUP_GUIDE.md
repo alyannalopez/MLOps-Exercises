@@ -296,3 +296,135 @@ and map intents to the phone's media player, notifications, or HomeKit.
 > Both devices must be on the **same Wi-Fi**. If the Pi can't connect, check
 > the IP, that `mac_handler.py` is still running, and that no firewall blocks
 > port 8765 (System Settings → Network → Firewall on the Mac).
+
+## 9. Simulated actions — make it DO the thing (watch the state change)
+
+By default the model only *prints* the intent. To make the assistant actually
+perform the action — but as a **dummy simulation** (no real hardware, no real
+apps) — the `mac_handler.py` now runs a **simulated smart-home hub**. It keeps
+believable state and renders it, so you can *watch* the whole voice→action loop:
+
+- 💡 lights turn on/off and change **brightness + color** (with a meter)
+- 🌡 thermostat **temperature drifts** toward the new target
+- ⏱ timers and ⏰ alarms **count down live**
+- 🎵 music "plays" with a **moving progress bar**
+- 📝 reminders and 📞 calls get **logged**
+
+It's a DUMMY: it touches nothing real. It just proves the pipeline end to end.
+
+### Option A — Single process, ZERO extra dependencies (easiest)
+Run the mic, the model, and the simulated home all in one terminal:
+```bash
+cd pi_bundle
+python3 live_demo.py --model model_int8.onnx --simulate
+```
+Say "turn on the lights" → the panel repaints with `Lights: ON`. Say "set a
+timer" → a countdown appears. Press Ctrl-C to see the final state.
+No `websockets`, no second terminal, no network. Works on the Pi or the Mac.
+
+### Option B — Two devices (Pi "brain" → Mac "hands")
+Same hub, but the action runs on a *different* machine over a WebSocket:
+```bash
+# Terminal on the MAC (the hands)
+cd pi_bundle
+pip install websockets
+python3 mac_handler.py --port 8765
+
+# Terminal on the PI (the brain)
+pip install websocket-client
+python3 live_demo.py --model model_int8.onnx --broadcast ws://<MAC-IP>:8765
+```
+Say a command into the Pi's mic → the **Mac** updates its simulated home.
+Find the Mac's IP with `ipconfig getifaddr en0`.
+
+### What you'll see (sample panel)
+```
+┌──────────────────────────── SIMULATED HOME ────────────────────────────┐
+  💡 Lights:  ON   [██████░░░░]  60%   warm white
+  🌡 Temp:    21.8°C   (target 23.5°C)
+  🎵 Music:   PLAYING  [▮▮▮▮▮▮▮▮▮·]  Jazz in the Rain
+  ⏱ Timer:    10 min  ⏳ 09:59
+  ⏰ Alarm:   —
+  📝 To-do:   Buy milk
+├──────────────────────────────────────────────────────────────────────────┤
+  [22:09:06] ⏱ SET_TIMER  10 min
+  [22:09:06] 🌡 THERMOSTAT  target -> 23.5°C
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Making it do REAL things later
+Every action lives in one place: the `HubSimulator.act()` method in
+`mac_handler.py`. Swap a body for a real device call when you're ready, e.g.:
+```python
+if intent == "LIGHTS_ON_OFF":
+    requests.post("http://homebridge.local/lights/toggle")   # real HomeKit
+    self.lights_on = not self.lights_on                      # keep sim state
+```
+The recognition side (the 340 KB INT8 model on the Pi) never changes — only
+the "hands" get upgraded from simulation to reality.
+
+---
+
+## 10. Recognizing NUMBERS (timers/alarms)
+
+See **`NUMBERS_GUIDE.md`** for the optional slot-filling layer that makes
+"set a timer for 5 minutes" actually set a 5-minute timer (adds a ~78 MB
+whisper.cpp ASR pass, ~300 ms, only on timer/alarm commands).
+
+---
+
+## 11. Wakeword — "Alexa, turn on the lights"
+
+By default the system listens for commands continuously. With **`--wakeword`**,
+it goes **hands-free**: the mic streams silently until you say a wakeword
+("Alexa", "Hey Jarvis", etc.), *then* it captures your command.
+
+Uses [openwakeword](https://github.com/dscripka/openWakeWord) (Apache 2.0) —
+5 pretrained ONNX models, ~2 ms per frame, no cloud, no GPU.
+
+### Setup (one-time)
+```bash
+pip install openwakeword
+python3 -c "import openwakeword; openwakeword.utils.download_models(['alexa','hey_jarvis','hey_mycroft','hey_rhasspy','timer'])"
+```
+Downloads ~5 MB of ONNX files to `~/.openwakeword/`.
+
+### Run
+```bash
+# All five wakewords (default)
+python3 live_demo.py --model model_int8.onnx --simulate --wakeword
+
+# Just "Alexa"
+python3 live_demo.py --model model_int8.onnx --simulate --wakeword --wake alexa
+
+# Lower threshold = more sensitive (catches quieter wakewords, more false triggers)
+python3 live_demo.py --model model_int8.onnx --simulate --wakeword --wake-threshold 0.4
+```
+
+### Available wakeword models
+| Name | You say | Size |
+|------|---------|------|
+| `alexa` | "Alexa" | 854 KB |
+| `hey_jarvis` | "Hey Jarvis" | 1.27 MB |
+| `hey_mycroft` | "Hey Mycroft" | 858 KB |
+| `hey_rhasspy` | "Hey Rhasspy" | 204 KB |
+| `timer` | "Timer" | 1.74 MB |
+
+### How it works
+```
+mic ──► [80 ms frame] ──► openwakeword.predict()
+                           │
+              score < 0.5  │  score ≥ 0.5
+                   │       │
+                   ▼       ▼
+               IDLE     WAKE ──► capture command (energy VAD, ≤5 s)
+               (loop)           ──► VCM.classify_pcm() ──► intent
+                                    ──► hub.handle_intent() ──► repaint
+                                    ──► reset ──► IDLE
+```
+
+### Tuning
+- **Misses your wakeword:** lower `--wake-threshold 0.35` or speak louder/closer.
+- **False triggers** (random noise wakes it): raise `--wake-threshold 0.65`.
+- **Wants a custom wakeword** (e.g. "Hey Yann"): openwakeword supports
+  training custom models via Colab — see the [openWakeWord docs](https://github.com/dscripka/openWakeWord#training-new-models).
