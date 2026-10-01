@@ -47,6 +47,29 @@ COMMAND_WINDOW = 5.0
 # Minimum speech duration to commit a command (seconds)
 MIN_SPEECH = 0.25
 
+# --- Anti-TV / ambient-speech guard ---------------------------------------
+# After a wake, the LISTENING state used to commit on pure energy: ANY loud
+# sound (a TV, a radio, someone in the next room) got classified. We now
+# transcribe the captured clip with a tiny whisper.cpp model and require it to
+# look like a real smart-home command. TV chatter transcribes to unrelated
+# prose (or empty) and is discarded -> back to idle.
+#
+# Words that appear in our 10 intents (plus a couple of connectives). If the
+# transcript contains NONE of these, it is almost certainly not a command.
+# NOTE: deliberately EXCLUDES generic connectives (to/the/in/of/at/for/my) --
+# those appear in ordinary TV/news speech and would defeat the gate. Only
+# domain-specific smart-home words count as a command signal.
+CMD_KEYWORDS = {
+    "play", "music", "song", "turn", "on", "off", "lights", "light",
+    "dim", "brighter", "darker", "color", "colour", "blue", "red", "green",
+    "yellow", "white", "warm", "cool", "set", "timer", "alarm", "minutes",
+    "minute", "hours", "hour", "call", "message", "text", "remind",
+    "reminder", "add", "list", "search", "find", "what", "where", "who",
+    "how", "weather", "temperature", "thermostat", "degrees",
+    "pause", "resume", "next", "previous", "volume", "louder", "quieter",
+    "stop", "please",
+}
+
 
 class WakeGate:
     """State-machine gate: IDLE → (wakeword) → LISTENING → (command) → IDLE.
@@ -61,10 +84,14 @@ class WakeGate:
 
     def __init__(self, wakeword_names: list[str] | None = None,
                  threshold: float = WAKE_THRESHOLD,
-                 quiet: bool = False):
+                 quiet: bool = False,
+                 transcriber=None):
         self.threshold = threshold
         self.quiet = quiet
         self.state = self.IDLE
+        # Optional ASR gate: a Transcriber instance (asr.py) or None. When set,
+        # captured commands are filtered through it to reject TV/ambient audio.
+        self.transcriber = transcriber
         self._sample_buf = np.array([], dtype=np.int16)  # accumulator for 1280-sample frames
 
         # Load the openwakeword model
@@ -192,9 +219,42 @@ class WakeGate:
         if len(self._cmd_buf) >= 16000 or elapsed > COMMAND_WINDOW:
             cmd = self._cmd_buf.copy()
             self._go_idle()
+            if not self._passes_command_gate(cmd):
+                return None
             return cmd
 
         return None
+
+    # ------------------------------------------------------------------
+    def _passes_command_gate(self, cmd: np.ndarray) -> bool:
+        """Reject captured audio that is not a real command (TV, radio, etc.).
+
+        Uses the optional ASR transcriber. If no transcriber is available we
+        always pass (graceful degradation to the old energy-only behavior).
+        A command passes when the transcript contains at least one known
+        command keyword. Empty transcripts (pure noise/music) fail the gate.
+        """
+        if self.transcriber is None or not getattr(self.transcriber, "available", False):
+            return True
+        try:
+            text = self.transcriber.transcribe_pcm(cmd, sr=OWW_SR)
+        except Exception:
+            return True  # ASR hiccup -> don't drop a possibly-real command
+        text_l = text.lower()
+        if not self.quiet:
+            print(f"\033[90m[gate] heard: {text!r}\033[0m")
+        if not text_l.strip():
+            return False  # silence / music / non-speech -> ignore
+        # Split contractions ("what's" -> "what", "don't" -> "do") so the
+        # keyword match isn't defeated by apostrophes from ASR.
+        norm = (text_l.replace("n't", " not ")
+                       .replace("'s", " s")
+                       .replace("'re", " re")
+                       .replace("'ll", " will")
+                       .replace("'ve", " have")
+                       .replace("'", " "))
+        words = set(norm.replace(",", " ").replace(".", " ").split())
+        return bool(words & CMD_KEYWORDS)
 
     # ------------------------------------------------------------------
     def _go_idle(self):
