@@ -118,6 +118,16 @@ meaningful. The test set is the canonical benchmark used throughout §7.
 
 ## 4. Model Architectures Benchmarked
 
+### 4.1 Architecture Diagram
+
+![CRNN Architecture](plots/architecture_diagram.png)
+
+### 4.2 Class Labels
+
+![Class Labels](plots/class_labels.png)
+
+### 4.3 Benchmark Results
+
 Five candidate architectures were trained under an identical protocol (100 epochs, batch 64,
 Adam lr=1e-3, cosine LR, weight decay 1e-4, seed 42, data augmentation on, MPS device) and
 evaluated on the same 2,876-clip test set.
@@ -149,6 +159,8 @@ evaluated on the same 2,876-clip test set.
 ![Per-intent recall across the four architectures](plots/bench_per_intent.png)
 
 ![Training dynamics — four architectures](plots/bench_training_curves.png)
+
+![Training curves — all 5 models comparison](plots/training_curves_5models.png)
 
 ---
 
@@ -226,6 +238,8 @@ REMINDERS/DIM) and **CALLS_MESSAGING** (recall 0.920 — the rarest command clas
 above 0.92; no intent is below 0.94 F1.
 
 ![Per-intent P/R/F1](plots/best_per_intent.png)
+
+![Per-Intent Recall Matrix](plots/per_intent_recall_matrix.png)
 
 ![Confusion matrix](plots/best_confusion.png)
 
