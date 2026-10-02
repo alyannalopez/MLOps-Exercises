@@ -23,7 +23,14 @@ ROOT = Path(__file__).resolve().parents[1]
 FEAT_DIR = ROOT / "data" / "features"
 MODEL_DIR = ROOT / "models"
 LOG_DIR = ROOT / "logs"
-DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
+# DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
+
 SEED = 42
 N_CLASSES = 20  # 19 intents + OUT_OF_SCOPE
 N_FRAMES = 100
@@ -31,6 +38,7 @@ MAX_EPOCHS = 100
 PATIENCE = 10
 BATCH_SIZE = 256
 LR = 1e-3
+WEIGHT_DECAY = float(os.environ.get("WEIGHT_DECAY", 1e-4))
 
 torch.manual_seed(SEED)
 np.random.seed(SEED)
@@ -126,7 +134,7 @@ def train_model(name: str, mfcc_tr, y_tr, mfcc_va, y_va, mfcc_te, y_te):
     dl_tr = DataLoader(ds_tr, batch_size=BATCH_SIZE, shuffle=True)
     dl_va = DataLoader(ds_va, batch_size=BATCH_SIZE)
     
-    opt = torch.optim.Adam(model.parameters(), lr=LR)
+    opt = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=MAX_EPOCHS)
     
     history = {"epoch": [], "train_loss": [], "train_acc": [], "val_acc": [], "val_loss": []}
@@ -211,6 +219,7 @@ def train_model(name: str, mfcc_tr, y_tr, mfcc_va, y_va, mfcc_te, y_te):
     result = {
         "model": name,
         "params": n_params,
+        "weight_decay": WEIGHT_DECAY,
         "best_epoch": best_epoch,
         "best_val_acc": round(best_val, 4),
         "test_acc": round(te_acc, 4),
@@ -250,7 +259,9 @@ def main():
     print(f"Label dist (train): {np.bincount(y_all['train'], minlength=N_CLASSES)}")
     
     results = {}
-    for name in MODELS:
+    # for name in MODELS:
+    only = os.environ.get("ONLY_MODEL")
+    for name in ([only] if only else MODELS):
         r = train_model(name, mfcc_tr, y_all["train"], mfcc_ho, y_all["holdout"], mfcc_te, y_all["test"])
         results[name] = r
     

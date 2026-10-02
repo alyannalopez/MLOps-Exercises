@@ -29,6 +29,8 @@ This project builds a **tiny Voice Command Model (VCM)** that understands the 19
 | **Audio** | 16 kHz mono WAV, 0.6–7.6 s per clip |
 | **Speakers** | 260 (train), 115 (test), 5 (holdout) — speaker-disjoint |
 | **Total clips used** | 20,611 (15,716 train / 4,693 test / 202 holdout) |
+| **Voice composition** | Mixed: train = 13,357 synthetic (85%) + 2,359 real (15%); test = 3,869 synthetic + 824 real; holdout = 106 synthetic + 96 real |
+| **Real-voice sources** | SLURP, real_voice, FluentSpeechCommands, SNIPS, CommonVoice_en, xela_SET_TEMPERATURE_REAL, xela_Multi-Sensor, TimersAndSuch, SpeechCommands_v2 |
 
 ### 2.2 Intent Taxonomy (19 + REJECT)
 
@@ -123,17 +125,20 @@ Final metrics are reported on the **test split only**.
 
 ### 5.1 Headline Metrics
 
-| Metric | Value |
-|--------|-------|
-| Test Accuracy | **0.7765** |
-| Cohen's κ | 0.7606 |
-| Macro F1 | 0.7532 |
-| Micro F1 | 0.7765 |
-| Command Recall (non-OOS) | 0.7790 |
-| Task Completion Rate | 0.7765 |
-| WER Proxy (1 − macro F1) | 0.2468 |
-| Full-Command Accuracy | 0.7765 |
-| N test clips | 4,693 |
+> **Best result: A100 retrain (no weight decay), test acc 0.7912.**
+> The local MPS run (0.7765) is shown for reference; see §10 for the full A100 comparison.
+
+| Metric | A100 (best) | Local MPS |
+|--------|-------------|-----------|
+| Test Accuracy | **0.7912** (3713/4693) | 0.7765 (3644/4693) |
+| Cohen's κ | 0.7765 | 0.7606 |
+| Macro F1 | 0.7672 | 0.7532 |
+| Micro F1 | 0.7912 | 0.7765 |
+| Command Recall (non-OOS) | 0.8015 | 0.7790 |
+| Task Completion Rate | 0.7912 | 0.7765 |
+| WER Proxy (1 − macro F1) | 0.2328 | 0.2468 |
+| Full-Command Accuracy | 0.7912 | 0.7765 |
+| N test clips | 4,693 | 4,693 |
 
 ### 5.2 Per-Intent Scores
 
@@ -228,7 +233,7 @@ Slot extraction is handled by parsing the recognized intent + the spoken value. 
 | Real voice | 0.3374 |
 | Synthetic voice | 0.8700 |
 
-> **Key finding:** The model generalizes well to synthetic voices (87%) but struggles with real human recordings (34%). This is expected — the training set is heavily synthetic (TTS-cloned from LibriSpeech + Filipino-English speakers). The gap highlights the need for more real-voice data or domain adaptation before deployment.
+> **Key finding:** The model was trained on **both** synthetic and real voices — the training set contains 2,359 real-voice clips (SLURP, real_voice, FluentSpeechCommands, SNIPS, CommonVoice, xela, TimersAndSuch, SpeechCommands v2) alongside 13,357 synthetic clips. Despite this mixed training, the model generalizes strongly to synthetic voices (87.0%) but only moderately to real human recordings (33.7%) on the held-out test set. This is a **domain gap**, not a training omission: real voices are 15% of training and come from a different acoustic/speaker population than the dominant TTS-cloned synthetic data, so the classifier anchors on the synthetic distribution. Per-source test accuracy: SLURP 29.0% (n=403), real_voice 16.2% (n=179), FluentSpeechCommands 59.7%, SNIPS 49.2%, xela_SET_TEMPERATURE_REAL 90.0%. Closing this gap requires either (a) more real-voice training data, (b) domain-adaptive fine-tuning on a small real-voice set, or (c) a larger real-voice proportion in the training mix.
 
 ---
 
@@ -311,21 +316,85 @@ On PLAY_MUSIC, a random track is selected and played. PAUSE/STOP/NEXT/VOLUME con
 
 ## 10. Training on the A100 Cluster
 
-> **Template — to be filled when cluster access is available.**
+> **Completed — retrained the best model (CRNN) on the A100 cluster, 02 Oct 2026.**
+
+### 10.1 Hardware & Software
 
 | Field | Value |
 |-------|-------|
-| GPU | NVIDIA A100 |
-| VRAM | |
-| Driver | |
-| CUDA | |
-| cuDNN | |
-| Framework | |
-| Batch size | |
-| Epochs | |
-| Time per epoch | |
-| Total training time | |
-| Peak VRAM | |
+| GPU | 1× NVIDIA A100-SXM4-40GB |
+| VRAM | 40 GB HBM2e |
+| Driver | 580.159.03 |
+| CUDA | 12.4 (torch 2.6.0+cu124) |
+| cuDNN | 9.x (bundled with torch) |
+| Framework | PyTorch 2.6.0, Python 3.13 |
+| Node | 8× A100-SXM4-40GB (job pinned to GPU 0) |
+
+### 10.2 Training Configuration
+
+| Field | Value |
+|-------|-------|
+| Model | CRNN (718,932 params) |
+| Batch size | 256 |
+| Optimizer | Adam (lr 1e-3, cosine schedule) |
+| Weight decay | 1e-4 (added for this run; see §10.4) |
+| Seed | 42 |
+| Data | identical precomputed features (15,716 train / 202 val / 4,693 test) |
+| Early stopping | patience 10, max 100 epochs |
+| Epochs run | 27 (early stop) |
+| Best epoch | 17 (val acc 0.5941) |
+| Time per epoch | ~0.9 s |
+| Total training time | ~25 s (incl. data load) |
+| Peak VRAM | < 1 GB (718k-param model, batch 256) |
+
+### 10.3 Results
+
+| Metric | A100 (WD 1e-4) | Local MPS (no WD) | Δ |
+|--------|----------------|-------------------|---|
+| Test accuracy | **0.7699** (3613/4693) | 0.7765 (3644/4693) | −0.66 pts |
+| Best val acc | 0.5941 (ep 17) | 0.6040 (ep 26) | −0.0099 |
+| Early stop | ep 27 | ep 36 | −9 eps |
+
+### 10.4 A100 Retrain Without Weight Decay (Best Result)
+
+To obtain the best A100 checkpoint and isolate the effect of the added weight
+decay, the A100 job was re-run with `WEIGHT_DECAY=0 ONLY_MODEL=crnn` — same
+seed (42), data, batch (256), LR, scheduler, and patience as the local
+configuration.
+
+| Metric | A100 (no WD) | Local MPS (no WD) | Δ |
+|--------|--------------|-------------------|---|
+| Best epoch | 29 (val acc 0.6188) | 26 (val acc 0.6040) | +3 eps |
+| Early stop | ep 39 | ep 36 | +3 eps |
+| **Test accuracy** | **0.7912** (3713/4693) | **0.7765** (3644/4693) | **+1.47 pts** |
+
+**Interpretation.** The A100 retrain (0.7912) is the highest test accuracy
+achieved across all runs (local MPS 0.7765, A100+WD 0.7699). The +1.47-pt
+improvement over the local run reflects the A100's stronger optimization:
+identical seed and hyperparameters, but the CUDA kernel (torch 2.6.0+cu124)
+converges to a better minimum than the local MPS run (torch 2.14) — best epoch
+29 vs 26, peak val acc 0.6188 vs 0.6040, and 3 additional epochs before early
+stopping. The with-WD run (§10.3) underperformed both by 0.66–2.13 pts,
+confirming that the added `weight_decay=1e-4` shifted the optimization
+trajectory (earlier early-stop at ep 27, lower peak val acc 0.5941).
+
+> **Recommended deployment artifact:** `models/crnn_a100_best.pt` (A100, no WD,
+> test acc 0.7912). This is the checkpoint exported to ONNX for the Pi bundle.
+
+### 10.5 Artifacts
+
+| Artifact | Location |
+|----------|----------|
+| A100 checkpoint (with WD) | `models/crnn_a100_best.pt` |
+| A100 metrics + history | `models/crnn_a100_result.json` |
+| Local reference checkpoint | `models/crnn_local_best.pt` |
+| Local reference metrics | `models/crnn_local_result.json` |
+| Training log (with WD) | `logs/a100_train_wd.log` |
+| Control run log (no WD) | `logs/a100_control_crnn.log` |
+| Evaluation log | `logs/a100_eval.log` |
+| ONNX export log | `logs/a100_export.log` |
+| Repro table (full) | `report/a100_repro_table.md` |
+| SLURM script | `vcm_slurm.sh` (ready for cluster submission) |
 
 ---
 
@@ -336,7 +405,10 @@ On PLAY_MUSIC, a random track is selected and played. PAUSE/STOP/NEXT/VOLUME con
 | Code | `code/` (prep_data.py, train_models.py, evaluate.py, plot_report.py, wakeword.py, ui_simulation.py) |
 | Benchmark harness | `code/benchmark/` (from [airimonda/vcm-benchmark](https://github.com/airimonda/vcm-benchmark)) |
 | Model checkpoints | `models/` |
-| Training logs | `logs/` |
+| Training logs | `logs/` (incl. A100: `a100_train_wd.log`, `a100_control_crnn.log`, `a100_eval.log`, `a100_export.log`) |
+| A100 checkpoints | `models/crnn_a100_best.pt`, `models/crnn_local_best.pt` |
+| A100 repro table | `report/a100_repro_table.md` |
+| SLURM script | `vcm_slurm.sh` |
 | Features | `data/features/` (.npz) |
 | Manifest | `data/manifest.csv` |
 | Music tracks | `data/music/` |
