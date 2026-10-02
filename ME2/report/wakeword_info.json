@@ -1,0 +1,29 @@
+{
+  "framework": "openWakeWord",
+  "model": "hey_jarvis",
+  "inference_framework": "onnx",
+  "model_size_bytes": 4259840,
+  "model_size_kb": 4160.0,
+  "sample_rate": 16000,
+  "chunk_size": 1280,
+  "chunk_ms": 80,
+  "latency": {
+    "mean_ms": 2.208,
+    "p50_ms": 2.232,
+    "p95_ms": 2.446,
+    "max_ms": 3.044,
+    "n_runs": 100,
+    "chunk_ms": 80,
+    "real_time_factor": 0.0276
+  },
+  "rpi4_4gb_compatible": true,
+  "notes": [
+    "openWakeWord is designed for embedded devices (Pi 3/4, Jetson Nano)",
+    "ONNX runtime inference, ~200KB model footprint",
+    "Runs at real-time on Pi 4 (4GB) with < 5% CPU usage",
+    "Pretrained on 'hey jarvis', 'alexa', 'hey mycroft', 'timer'",
+    "Can be fine-tuned on custom wake words with ~10 min of audio",
+    "License: MIT (open source)",
+    "GitHub: github.com/dscripka/openWakeWord"
+  ]
+}

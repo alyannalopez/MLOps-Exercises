@@ -1,100 +1,68 @@
-# ME2 — Voice Command Model (VCM) for Smart Devices
+# ME2 — Voice Command Model (VCM)
 
-A tiny, on-device voice command classifier for the most common smart-device
-commands. Trained **exclusively on the Option B dataset** (Sir Mark's MEX2
-corpus) — 18,375 clips, 100 speakers, 10 intents + rejection. No ASR, no
-cloud: a small neural net maps 1-second audio windows directly to a command.
+**AI231 Machine Learning Engineering | Version 6**
 
-## Headline result
+A tiny voice command model that classifies 19 smart-device intents (93 phrase variations) + REJECT from 1-second audio clips. Designed for Raspberry Pi 4 (4 GB) deployment with openWakeWord gating.
 
-| Metric | Value |
-|---|---|
-| Best architecture | **1-D CNN** (log-mel, 246,443 params) |
-| Test accuracy (speaker-disjoint) | **97.91%** |
-| Macro F1 | 97.57% |
-| Command recall | 97.68% |
-| Reject recall | 100% |
-| Calibration (ECE) | 0.0062 |
-| Float32 / INT8 size | 0.99 MB / ~253 KB |
-| CPU inference (1 s clip) | 0.42 ms (p50) |
+## Results
 
-Full numbers: [`report/VCM_Final_Report.md`](report/VCM_Final_Report.md) and
-[`models/eval_results.json`](models/eval_results.json).
+| Model | Params | Test Acc |
+|-------|--------|----------|
+| Logistic | 80K | 39.8% |
+| DNN | 1.06M | 64.5% |
+| 1-D CNN | 224K | 73.2% |
+| **CRNN** | **719K** | **77.7%** ✅ |
+| Transformer | 273K | 61.6% |
 
-## Repository layout
+**Best model:** CRNN (CNN + BiLSTM) — 77.65% test accuracy, 2 ms inference (CPU), 702 KB INT8.
+
+## Structure
 
 ```
 ME2/
-├── ME2_Instructions-and-Notes.pdf   # exercise instructions
-├── README.md                        # this file
 ├── code/
-│   └── scripts/                     # full reproducible pipeline
-│       ├── label_map.py             # 32 raw folders -> 10 intents (source of truth)
-│       ├── features.py              # MFCC (T,40) / log-mel (T,80) extractor
-│       ├── models.py                # 4 architectures, shared (B,T,F)->(B,11) contract
-│       ├── build_manifest.py        # step 1: scan raw data -> manifest.csv
-│       ├── build_reject.py          # step 2: synthesize REJECT noise class
-│       ├── build_splits.py          # step 3: speaker-disjoint 70/15/15 split
-│       ├── build_feats.py           # step 4: extract + cache features (.npz)
-│       ├── train_benchmark.py       # step 5: train all 4 archs, benchmark
-│       ├── evaluate.py              # step 6: full metric battery
-│       ├── plot_report.py           # step 7: all report figures
-│       └── export_onnx.py           # step 8: ONNX float32 + int8 export
+│   ├── prep_data.py          # Download → extract → features
+│   ├── train_models.py       # 5 architectures, early stopping
+│   ├── evaluate.py           # Full metric battery
+│   ├── plot_report.py        # 10 figures
+│   ├── wakeword.py           # openWakeWord integration
+│   ├── ui_simulation.py      # Hardware command simulation
+│   └── benchmark/            # vcm-benchmark harness (sim mode)
 ├── data/
-│   ├── raw/optionB_v2/              # symlink -> Option B dataset (18,375 wav)
-│   ├── manifest.csv                 # 18,375 rows: path, intent, speaker, condition
-│   ├── reject/                      # 900 synthesized noise clips (REJECT class)
-│   ├── splits/{train,val,test}.csv  # speaker-disjoint split + stats.json
-│   └── feats/*.npz                  # cached MFCC + log-mel features
-├── models/                          # checkpoints, histories, benchmark, eval, ONNX
-└── report/
-    ├── VCM_Final_Report.md          # full technical report
-    └── plots/                       # 12 figures
+│   ├── hf/                   # HuggingFace dataset (parquet)
+│   ├── audio/                # Extracted WAV clips
+│   ├── features/             # MFCC + log-mel .npz
+│   ├── music/                # 5 CC-licensed tracks
+│   └── manifest.csv          # 20,611-row manifest
+├── models/                   # Checkpoints + results JSON
+├── report/
+│   ├── report.md             # Full technical report
+│   ├── evaluation_results.json
+│   ├── wakeword_info.json
+│   ├── ui_simulation_log.json
+│   └── plots/                # 10 figures
+└── ME2_Instructions-and-Notes.pdf
 ```
 
-## Reproduce from scratch
-
-Requires: Python 3.10+, `torch`, `librosa`, `soundfile`, `pandas`,
-`scikit-learn`, `matplotlib`, `onnx`, `onnxruntime`.
+## Quick Start
 
 ```bash
-cd code/scripts
-python3 build_manifest.py     # ~1 min   (scan raw data)
-python3 build_reject.py       # ~10 s    (synthesize reject class)
-python3 build_splits.py       # ~2 s     (speaker-disjoint split, 0 leaks)
-python3 build_feats.py        # ~3 min   (MFCC + log-mel, cached)
-python3 train_benchmark.py    # ~10 min  (4 archs, MPS, seed 42)
-python3 evaluate.py           # ~1 min   (full metric battery)
-python3 plot_report.py        # ~10 s    (12 figures)
-python3 export_onnx.py        # ~30 s    (float32 + int8, parity check)
+python3 code/prep_data.py       # ~75s
+python3 code/train_models.py    # ~15 min (MPS)
+python3 code/evaluate.py        # ~30s
+python3 code/plot_report.py     # ~10s
+python3 code/wakeword.py        # ~5s
+python3 code/ui_simulation.py   # instant
 ```
 
-All steps are deterministic (seed 42) and idempotent — rerunning overwrites
-outputs cleanly.
+## Dataset
 
-## The 10 intents
+[`airimonda/ai231-me2-voice-commands`](https://huggingface.co/datasets/airimonda/ai231-me2-voice-commands) — 19 intents, 93 commands, speaker-disjoint splits, synthetic negatives for rejection.
 
-| # | Intent | Option B raw folders |
-|---|--------|----------------------|
-| 0 | PLAY_MUSIC | PLAY_MUSIC |
-| 1 | QUESTION_SEARCH | WEATHER, TIME |
-| 2 | LIGHTS_ON_OFF | LIGHT_ON, LIGHT_OFF |
-| 3 | DIM_COLOR_LIGHTS | BRIGHTNESS_{20,60,100}, COLOR_{RED,GREEN,BLUE,YELLOW} |
-| 4 | SET_TIMER | TIMER_{10s,30s,1m} |
-| 5 | SET_ALARM | ALARM_{4_00AM,8_00AM,9_00PM} |
-| 6 | THERMOSTAT | TEMPERATURE_{18,22,26} |
-| 7 | MEDIA_CONTROL | PAUSE, STOP, NEXT, VOLUME_UP, VOLUME_DOWN |
-| 8 | REMINDERS_LISTS | CREATE_REMINDER_{STUDY,EXERCISE,DRINK_WATER}, LIST_REMINDERS |
-| 9 | CALLS_MESSAGING | CALL, MESSAGE |
-| 10 | REJECT | synthesized ambient noise (no speech) |
+## Wake Word
 
-## Data & method highlights
+[openWakeWord](https://github.com/dscripka/openWakeWord) — "hey jarvis", ONNX, 2.2 ms/chunk, 36× real-time, Pi 4 compatible.
 
-- **Dataset**: Option B only (per the revised instructions). 18,375 clips,
-  100 speakers, clean + noisy recordings, 32 fine-grained value folders.
-- **Split**: *speaker-disjoint* 70/15/15 — no speaker appears in more than
-  one split (verified: 0 leaks). This tests generalization to unknown voices.
-- **Features**: loudest-1-second window, 16 kHz, MFCC(40) for the small
-  models, log-mel(80) for the CNN/CRNN.
-- **Training**: Adam, cosine LR, early stopping (patience 25), seed 42, MPS.
-- **Constraint honored**: no ASR anywhere — classification only.
+## Benchmark Harness
+
+[`airimonda/vcm-benchmark`](https://github.com/airimonda/vcm-benchmark) — guided live benchmark for Pi deployment. Sim mode available for testing without hardware.

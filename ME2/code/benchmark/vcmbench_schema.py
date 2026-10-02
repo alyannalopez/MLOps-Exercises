@@ -1,0 +1,220 @@
+"""The agreed label space: 19 intents (+ out of scope) and 93 command variations.
+
+Students' runtimes name their intents differently ("SET_TIMER", "lights_on",
+"TEMPERATURE_22", "unknown", ...). `normalize_prediction` maps whatever the Pi
+printed onto this schema. Extra aliases can be added in the config file.
+"""
+from __future__ import annotations
+
+import csv
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+INTENTS = [
+    "PLAY_MUSIC", "PAUSE", "STOP", "NEXT", "VOLUME_UP", "VOLUME_DOWN",
+    "LIGHT_ON", "LIGHT_OFF", "WEATHER", "TIME", "CALL", "MESSAGE",
+    "LIST_REMINDERS", "TIMER", "ALARM", "TEMPERATURE", "BRIGHTNESS",
+    "COLOR", "CREATE_REMINDER",
+]
+OOS = "OUT_OF_SCOPE"
+NONE = "NO_RESPONSE"          # the Pi did not fire anything for this trial
+REJECT = "REJECT"             # scoring class: OUT_OF_SCOPE or NO_RESPONSE
+SLOTTED = {"TIMER", "ALARM", "TEMPERATURE", "BRIGHTNESS", "COLOR", "CREATE_REMINDER"}
+
+VARIATIONS_CSV = Path(__file__).with_name("variations.csv")
+
+
+@dataclass(frozen=True)
+class Variation:
+    intent: str
+    number: int
+    value: str      # slot value, "" for fixed commands
+    phrase: str     # the variation name used as the 93-way label
+
+
+def load_variations(path: Path = VARIATIONS_CSV) -> list[Variation]:
+    with open(path, newline="", encoding="utf-8") as f:
+        return [Variation(r["label"], int(r["variation"]), r["value"] or "", r["phrase"])
+                for r in csv.DictReader(f)]
+
+
+VARIATIONS = load_variations()
+VARIATION_BY_PHRASE = {v.phrase.lower(): v for v in VARIATIONS}
+assert len(VARIATIONS) == 93, len(VARIATIONS)
+
+
+def _phrase_key(text: str) -> str:
+    """Phrase comparison key: lowercase, punctuation dropped, single spaces."""
+    return " ".join(re.sub(r"[^a-z0-9 ]+", "", str(text).lower().replace("_", " ")).split())
+
+
+VARIATION_BY_KEY = {_phrase_key(v.phrase): v for v in VARIATIONS}
+assert len(VARIATION_BY_KEY) == 93
+
+
+def match_variation(value) -> Variation | None:
+    """A 93-class prediction -> its Variation.
+
+    Accepts the phrase itself ("Set the temperature to 22 degrees", any case,
+    punctuation ignored) or `variation_id` = 0-based row number in
+    vcmbench/variations.csv (as int or digit string).
+    """
+    if value is None:
+        return None
+    if isinstance(value, int) or (isinstance(value, str) and value.strip().isdigit()):
+        i = int(value)
+        return VARIATIONS[i] if 0 <= i < len(VARIATIONS) else None
+    return VARIATION_BY_KEY.get(_phrase_key(value))
+
+# Common names other runtimes use. Keys are already normalised (see _key).
+BUILTIN_ALIASES = {
+    "PLAY": "PLAY_MUSIC", "MUSIC": "PLAY_MUSIC", "PLAY_SONG": "PLAY_MUSIC", "START_MUSIC": "PLAY_MUSIC",
+    "PAUSE_MUSIC": "PAUSE", "PAUSE_SONG": "PAUSE",
+    "STOP_MUSIC": "STOP", "STOP_PLAYBACK": "STOP",
+    "NEXT_SONG": "NEXT", "SKIP": "NEXT", "SKIP_SONG": "NEXT", "NEXT_TRACK": "NEXT",
+    "VOLUMEUP": "VOLUME_UP", "INCREASE_VOLUME": "VOLUME_UP", "VOL_UP": "VOLUME_UP", "LOUDER": "VOLUME_UP",
+    "VOLUMEDOWN": "VOLUME_DOWN", "DECREASE_VOLUME": "VOLUME_DOWN", "VOL_DOWN": "VOLUME_DOWN",
+    "LOWER_VOLUME": "VOLUME_DOWN", "QUIETER": "VOLUME_DOWN",
+    "LIGHTS_ON": "LIGHT_ON", "TURN_ON_LIGHTS": "LIGHT_ON", "TURN_ON_LIGHT": "LIGHT_ON", "LIGHTON": "LIGHT_ON",
+    "LIGHTS_OFF": "LIGHT_OFF", "TURN_OFF_LIGHTS": "LIGHT_OFF", "TURN_OFF_LIGHT": "LIGHT_OFF", "LIGHTOFF": "LIGHT_OFF",
+    "GET_WEATHER": "WEATHER", "WEATHER_QUERY": "WEATHER",
+    "GET_TIME": "TIME", "TELL_TIME": "TIME", "TIME_QUERY": "TIME",
+    "MAKE_CALL": "CALL", "PHONE_CALL": "CALL", "CALL_CONTACT": "CALL",
+    "SEND_MESSAGE": "MESSAGE", "SEND_MSG": "MESSAGE", "TEXT": "MESSAGE",
+    "LIST_REMINDER": "LIST_REMINDERS", "SHOW_REMINDERS": "LIST_REMINDERS", "GET_REMINDERS": "LIST_REMINDERS",
+    "SET_TIMER": "TIMER", "START_TIMER": "TIMER", "COUNTDOWN": "TIMER",
+    "SET_ALARM": "ALARM", "WAKE_UP": "ALARM",
+    "SET_TEMPERATURE": "TEMPERATURE", "TEMP": "TEMPERATURE", "SET_TEMP": "TEMPERATURE",
+    "SET_TEMPERATURE_REAL": "TEMPERATURE", "AIRCON": "TEMPERATURE", "THERMOSTAT": "TEMPERATURE",
+    "SET_BRIGHTNESS": "BRIGHTNESS", "DIM": "BRIGHTNESS",
+    "SET_COLOR": "COLOR", "CHANGE_COLOR": "COLOR", "SET_COLOUR": "COLOR", "COLOUR": "COLOR",
+    "LIGHT_COLOR": "COLOR",
+    "REMINDER": "CREATE_REMINDER", "SET_REMINDER": "CREATE_REMINDER", "ADD_REMINDER": "CREATE_REMINDER",
+    "REMIND": "CREATE_REMINDER", "REMIND_ME": "CREATE_REMINDER",
+    # rejections
+    "OOS": OOS, "UNKNOWN": OOS, "NONE": OOS, "NULL": OOS, "REJECT": OOS, "REJECTED": OOS,
+    "OTHER": OOS, "NOISE": OOS, "SILENCE": OOS, "BACKGROUND": OOS, "UNK": OOS, "NO_INTENT": OOS,
+    "NOT_UNDERSTOOD": OOS, "FALLBACK": OOS, "OUT_OF_SCOPE": OOS,
+}
+
+
+def _key(name: str) -> str:
+    return re.sub(r"[^A-Z0-9]+", "_", str(name).upper()).strip("_")
+
+
+def build_alias_table(extra: dict[str, str] | None = None) -> dict[str, str]:
+    table = {i: i for i in INTENTS}
+    table.update(BUILTIN_ALIASES)
+    for k, v in (extra or {}).items():
+        table[_key(k)] = v if v in INTENTS or v == OOS else _key(v)
+    return table
+
+
+def normalize_prediction(intent: str | None, slot: str | None,
+                         aliases: dict[str, str]) -> tuple[str, str, bool]:
+    """Map a raw (intent, slot) printed by the Pi onto the schema.
+
+    Returns (intent, slot, known). `intent` is one of INTENTS, OOS, or
+    "OTHER:<raw>" when no alias matches (known=False). A joint name such as
+    "TEMPERATURE_22" or "SET_TIMER_30_SECONDS" is split into intent + slot
+    when no separate slot was given.
+    """
+    if intent is None or str(intent).strip() == "":
+        return OOS, "", True
+    k = _key(intent)
+    slot = (slot or "").strip()
+    if k in aliases:
+        return aliases[k], slot, True
+    # longest alias that is a prefix of the name; the rest is the slot
+    parts = k.split("_")
+    for n in range(len(parts) - 1, 0, -1):
+        head = "_".join(parts[:n])
+        if head in aliases:
+            tail = " ".join(parts[n:]).lower()
+            return aliases[head], slot or tail, True
+    return f"OTHER:{k}", slot, False
+
+
+def resolve_prediction(intent: str | None, slot: str | None, variation, aliases: dict[str, str],
+                       id_order: list[str] | None = None) -> tuple[str, str, bool, str]:
+    """Like normalize_prediction, but also accepts a 93-class output.
+
+    `variation` (or an `intent` that is itself one of the 93 phrases) is turned
+    into its intent + slot value. Returns (intent, slot, known, variation phrase
+    or "").
+    """
+    if id_order is not None and str(variation).strip().lstrip("-").isdigit():
+        hit = lookup_id(int(str(variation).strip()), id_order)
+        if hit is None:
+            return f"OTHER:ID_{str(variation).strip()}", "", False, ""
+        return hit[0], hit[1], True, hit[2]
+    v = match_variation(variation) if variation not in (None, "") else None
+    if v is None and intent and " " in str(intent).strip():
+        v = match_variation(intent)
+    if v is not None:
+        return v.intent, v.value, True, v.phrase
+    if not intent and variation not in (None, ""):
+        # not one of the 93 phrases: an alias like "OUT_OF_SCOPE", else flagged as unknown
+        intent = str(variation)
+    i, s, known = normalize_prediction(intent, slot, aliases)
+    return i, s, known, ""
+
+
+# ---------------------------------------------------------------- numeric class ids
+#
+# A model that prints a number (variation_id) numbers its 93 classes in some order.
+# The orders below are all built from the holdout manifest's `variation` column, so
+# they match how a student most likely built their label list from the dataset.
+
+ID_ORDER_HELP = {
+    "manifest": "order of first appearance in the dataset manifest (= vcmbench/variations.csv); "
+                "out of scope = 93",
+    "alphabetical": "the 93 names sorted A-Z (sorted(set(...)), sklearn LabelEncoder, pandas category); "
+                    "out of scope = 93",
+    "alphabetical_oos": "the 93 names plus OUT_OF_SCOPE, all sorted A-Z together",
+    "file": "your own label file: one name per line (or a JSON list), line 1 = id 0",
+}
+
+
+def manifest_order(variation_column) -> list[str]:
+    """The 93 variation names in order of first appearance in a manifest column."""
+    return list(dict.fromkeys(str(v) for v in variation_column if v and str(v) != "nan"))
+
+
+def read_label_file(path: str | Path) -> list[str]:
+    import json as _json
+    text = Path(path).expanduser().read_text(encoding="utf-8")
+    if str(path).endswith(".json"):
+        obj = _json.loads(text)
+        if isinstance(obj, dict):                       # {"0": "Play music", ...} or {"Play music": 0, ...}
+            if all(str(k).isdigit() for k in obj):
+                return [obj[k] for k in sorted(obj, key=int)]
+            return [k for k, _ in sorted(obj.items(), key=lambda kv: int(kv[1]))]
+        return [str(x) for x in obj]
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def id_orders(manifest_phrases: list[str] | None = None, label_file: str | None = None) -> dict[str, list[str]]:
+    base = list(manifest_phrases or [v.phrase for v in VARIATIONS])
+    out = {"manifest": base + [OOS], "alphabetical": sorted(base) + [OOS],
+           "alphabetical_oos": sorted(base + [OOS])}
+    if label_file:
+        out["file"] = read_label_file(label_file)
+    return out
+
+
+def lookup_id(i: int, order: list[str]) -> tuple[str, str, str] | None:
+    """(intent, slot, variation phrase) for class id `i` in `order`; OOS -> (OOS, "", "");
+    None if the id is outside the list or the name is not one of the 93."""
+    if not 0 <= i < len(order):
+        return None
+    name = order[i]
+    if _key(name) in ("OUT_OF_SCOPE", "OOS", "UNKNOWN", "NONE"):
+        return OOS, "", ""
+    v = match_variation(name)
+    return (v.intent, v.value, v.phrase) if v else None
+
+
+def variations_for(intent: str, value: str = "") -> list[Variation]:
+    return [v for v in VARIATIONS if v.intent == intent and (not value or v.value.lower() == value.lower())]

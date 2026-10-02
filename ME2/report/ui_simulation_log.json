@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-10-02T18:32:08.586828",
+  "commands": [
+    [
+      "LIGHT_ON",
+      ""
+    ],
+    [
+      "BRIGHTNESS",
+      "60 percent"
+    ],
+    [
+      "COLOR",
+      "Blue"
+    ],
+    [
+      "PLAY_MUSIC",
+      ""
+    ],
+    [
+      "VOLUME_UP",
+      ""
+    ],
+    [
+      "NEXT",
+      ""
+    ],
+    [
+      "TIMER",
+      "30 seconds"
+    ],
+    [
+      "ALARM",
+      "6:00 AM"
+    ],
+    [
+      "TEMPERATURE",
+      "22 degrees"
+    ],
+    [
+      "CREATE_REMINDER",
+      "Drink water"
+    ],
+    [
+      "WEATHER",
+      ""
+    ],
+    [
+      "TIME",
+      ""
+    ],
+    [
+      "PAUSE",
+      ""
+    ],
+    [
+      "LIST_REMINDERS",
+      ""
+    ],
+    [
+      "OUT_OF_SCOPE",
+      ""
+    ],
+    [
+      "STOP",
+      ""
+    ],
+    [
+      "LIGHT_OFF",
+      ""
+    ]
+  ],
+  "final_state": {
+    "lights_on": false,
+    "brightness": 60,
+    "color": "Blue",
+    "music_playing": false,
+    "volume": 60,
+    "temperature": 22,
+    "alarms": [
+      "6:00 AM"
+    ],
+    "reminders": [
+      "Drink water"
+    ]
+  }
+}
