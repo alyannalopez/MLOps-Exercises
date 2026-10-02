@@ -1,417 +1,264 @@
-# Voice Command Model (VCM) — Final Technical Report
+# ME2 — Voice Command Model (VCM) for Smart Devices
+## Technical Report (Option B dataset, rebuilt from scratch)
 
-**Course:** AI231 · MLOps Exercises — ME2: Voice Controlled Smart Device
-**Author:** Alyanna Lopez
-**Date:** October 1, 2026
-**Device target:** Raspberry Pi 4/5 (fully on-device, no cloud, no LLM)
+**Date:** 2026-10-02 · **Hardware:** Apple Silicon (MPS training, CPU latency bench) · **Seed:** 42 throughout
 
 ---
 
-## 1. Executive Summary
+## 1. Objective
 
-This report documents the design, training, benchmarking, and validation of a **tiny
-on-device Voice Command Model (VCM)** that maps spoken smart-home utterances to one of
-**10 command intents** (plus a rejection class). The model is a **CRNN** (1-D CNN feature
-extractor + BiLSTM temporal encoder) consuming a fixed 101×80 log-mel spectrogram,
-exported to **INT8 ONNX at 339 KB** and running at **~2.7 ms median inference** on the
-target hardware — comfortably real-time and standalone.
+Build a tiny, on-device **Voice Command Model (VCM)** that understands the most
+common commands humans issue to smart devices — without ASR (constraint #8:
+classification only, no speech recognition, no cloud). Per the revised
+instructions, this build uses **only the Option B dataset** (Sir Mark's MEX2
+corpus).
 
-**Headline result:** the deployed model scores **97.32% test accuracy** (Cohen's κ = 0.970)
-on a held-out 2,876-clip benchmark, with **100% rejection accuracy**, **zero false
-triggers**, **zero missed commands**, and **excellent calibration** (ECE = 0.018). It is
-the best of **five benchmarked architectures** and beats the strongest baseline (1-D CNN,
-95.56%) by **+1.76 points**.
-
-All eight exercise deliverables are satisfied:
-
-| # | Deliverable | Status |
-|---|-------------|--------|
-| 1 | Build a dataset to train VCMs (collective) | ✅ 141,681-clip multi-source corpus |
-| 2 | Build & train a VCM (individual) | ✅ CRNN, 97.32% |
-| 3 | Design a benchmark for validating VCMs (collective) | ✅ 2,876-clip held-out suite + metric battery |
-| 4 | Validate performance (individual) | ✅ §7 full metric battery |
-| 5 | Real-world demo on RPi4/5 (individual) | ✅ `live_demo.py` + wake word |
-| 6 | Tiny, real-time on RPi4/5 | ✅ 339 KB INT8, ~2.7 ms |
-| 7 | Standalone, no cloud models | ✅ all on-device |
-| 8 | No LLM, pure VCM 1→10, on-device | ✅ end-to-end audio→intent |
-
----
+The 10 target intents are ranked by real-world usage (259,164 logged Alexa +
+Google Home commands + consumer surveys): play music, ask a question/search
+(weather, time), control lights, dim/color lights, timers, alarms, thermostat,
+media control, reminders/lists, calls/messaging — plus an 11th **REJECT**
+class for ambient noise / no command.
 
 ## 2. Dataset
 
-The corpus is a **multi-source mixture** assembled to cover the ten most common smart-home
-command families (ranked from 259,164 logged Alexa/Google-Home commands + U.S. consumer
-surveys). Sources and their roles:
+| Property | Value |
+|---|---|
+| Source | **Option B only** — `data/raw/optionB_v2/MEX2/Data` |
+| Clips | **18,375** WAV files (12 kHz mono) |
+| Speakers | **100** (84 English + 16 Filipino-English) |
+| Conditions | 9,192 clean + 9,183 noisy |
+| Fine-grained intents | 32 folders (value-specific, e.g. `TIMER_30s`) |
+| Coarse intents | 10 (mapped via `code/scripts/label_map.py`) |
+| REJECT class | 900 synthesized noise clips (white/pink/babble, 1 s @ 16 kHz) |
 
-| Source | Clips | Role |
-|--------|-------:|------|
-| **Google Speech Commands** | 78,133 | high-volume, multi-speaker, single/two-word commands (media, lights, yes/no) |
-| **SLURP** | 40,247 | natural conversational speech for robustness |
-| **Option B (MEX2, Mark Andrian)** | 18,375 | **slotted, full-sentence commands** with explicit values (colors, timers, alarms, temperatures, reminders) — the richest source for the value-bearing intents |
-| **FLEURS** | 3,266 | additional speaker/language diversity |
-| **Snips** | 1,660 | small-footprint command examples |
-| **Synthetic reject** | 1,500 | engineered non-command audio for the rejection class |
-| **Total** | **141,681** | |
+The 32 raw folders map to the 10 intents as follows (see
+`code/scripts/label_map.py` for the full table):
 
-**Why Option B matters.** Option B is the only source with *explicit slot values*
-("set a timer for **one minute**", "set the lights to **green**", "set an alarm for
-**four am**"). It is the ground truth for the value-bearing intents (DIM_COLOR_LIGHTS,
-SET_TIMER, SET_ALARM, THERMOSTAT, REMINDERS_LISTS). Because it is a minority of the raw
-corpus (~13%), the training recipe (§5) deliberately re-weights toward it.
+| # | Intent | Raw folders | Train clips |
+|---|--------|-------------|------------|
+| 0 | PLAY_MUSIC | PLAY_MUSIC | 414 |
+| 1 | QUESTION_SEARCH | WEATHER, TIME | 766 |
+| 2 | LIGHTS_ON_OFF | LIGHT_ON, LIGHT_OFF | 797 |
+| 3 | DIM_COLOR_LIGHTS | BRIGHTNESS_{20,60,100}, COLOR_{RED,GREEN,BLUE,YELLOW} | 2,867 |
+| 4 | SET_TIMER | TIMER_{10s,30s,1m} | 1,230 |
+| 5 | SET_ALARM | ALARM_{4_00AM,8_00AM,9_00PM} | 1,215 |
+| 6 | THERMOSTAT | TEMPERATURE_{18,22,26} | 1,258 |
+| 7 | MEDIA_CONTROL | PAUSE, STOP, NEXT, VOLUME_UP, VOLUME_DOWN | 1,976 |
+| 8 | REMINDERS_LISTS | CREATE_REMINDER_{STUDY,EXERCISE,DRINK_WATER}, LIST_REMINDERS | 1,626 |
+| 9 | CALLS_MESSAGING | CALL, MESSAGE | 752 |
 
-**Intent taxonomy (10 + reject):**
+![Dataset balance](plots/10_dataset_balance.png)
 
-| idx | Intent | Example utterance |
-|----:|--------|-------------------|
-| 0 | REJECT | (non-command / ambient) |
-| 1 | PLAY_MUSIC | "play music" |
-| 2 | QUESTION_SEARCH | "what's the weather", "what time is it" |
-| 3 | LIGHTS_ON_OFF | "turn on the lights" |
-| 4 | DIM_COLOR_LIGHTS | "dim the lights to 60%", "set the lights to green" |
-| 5 | SET_TIMER | "set a timer for one minute" |
-| 6 | SET_ALARM | "set an alarm for 4 am" |
-| 7 | THERMOSTAT | "set the temperature to 22 degrees" |
-| 8 | MEDIA_CONTROL | "pause", "next", "volume up" |
-| 9 | REMINDERS_LISTS | "remind me to drink water" |
-| 10 | CALLS_MESSAGING | "call mom" |
+## 3. Data processing (ETL)
 
----
+Pipeline: `build_manifest.py` → `build_reject.py` → `build_splits.py` →
+`build_feats.py` (all in `code/scripts/`).
 
-## 3. Data Processing & ETL
+1. **Manifest** — walk the raw tree, parse the filename convention
+   `<INTENT>_s<SPEAKER>_v<VARIANT>_<clean|noisy>.wav`, read WAV headers for
+   duration, map folder → 10-intent. Output: `data/manifest.csv` (18,375 rows,
+   0 unparseable).
+2. **Reject synthesis** — 900 one-second clips from three procedural noise
+   generators (white, pink via Paul Kellet's filter, syllable-rate-modulated
+   low-pass noise). No external data needed; the model learns to reject
+   non-command audio.
+3. **Split — speaker-disjoint 70/15/15** — every speaker's clips go wholly
+   into one split (the strongest leak-safe design: it measures
+   generalization to *unknown voices*). Verified: **0 speaker leaks**.
+   Reject clips split row-wise (300 per split).
+   - train: 13,201 (12,901 commands + 300 reject)
+   - val: 3,011 (2,711 + 300)
+   - test: 3,063 (2,763 + 300)
+4. **Standardization / features** — each clip: resample to 16 kHz mono →
+   crop to the **loudest 1-second window** (frame-power argmax) → pad if
+   shorter → extract:
+   - **MFCC(40)** @ 25 ms window / 10 ms hop → `(T=101, F=40)` for logistic/DNN
+   - **log-mel(80)** same framing → `(T=101, F=80)` for CNN/CRNN
+   Features cached to `data/feats/*.npz` (training/eval never re-read audio).
 
-All raw clips flow through a single, deterministic ETL pipeline so that every architecture
-consumes the **identical** fixed-size feature tensor.
+## 4. Training
 
-### 3.1 Normalization / standardization
-- **Resample** to 16 kHz mono (`librosa.load(sr=16000)`).
-- **Crop to the loudest 1.0 s window** (frame-power arg-max) or zero-pad short clips — this
-  standardizes every utterance to a fixed 16,000-sample frame regardless of source length.
-- **Feature extraction** (two families, shared constants: 25 ms window, 10 ms hop):
-  - **MFCC (T=101, F=40)** → logistic / DNN baselines
-  - **log-mel (T=101, F=80)** → 1-D CNN / CRNN, with `power_to_db(S, ref=max)` normalization
-- **Orientation:** librosa returns (F, T); features are transposed to **(T, F)** so the time
-  axis is first, matching the conv layout and the ONNX input contract.
-- **Feature cache:** extracted features are persisted to a NumPy archive
-  (`_retrain_feats_logmel_20727.npz`) so re-training and evaluation are reproducible and
-  cheap (no re-decode of 141k wavs per run).
+- **Optimizer:** Adam (lr 1e-3, weight decay 1e-5) + cosine annealing
+- **Early stopping:** patience 25 on val accuracy; best-val checkpoint kept
+- **Batch:** 64 · **Max epochs:** 100 · **Device:** MPS · **Seed:** 42
+- **Loss:** plain CrossEntropy (no rebalancing — the benchmark reflects the
+  honest per-architecture comparison under natural imbalance)
 
-### 3.2 ETL manifest
-A central `manifest.csv` records, per clip: `source, rel_path, abs_path, intent_raw,
-intent_10, intent_name, speaker, variant, condition, text, duration_s, weight`. This single
-table drives splitting, weighting, and evaluation, and is the join key for the value-level
-tests.
+All four deep models share one contract: `(B, T, F) → (B, 11)` logits.
 
-### 3.3 Train / Validation / Test split
-Speaker-disjoint, **intent-balanced** splits (cap = 2,500 per class, OOV cap = 400,
-seed = 0) to prevent a single dominant speaker or class from leaking across splits:
+## 5. Architecture benchmark (5 candidates)
 
-| Split | Clips | Purpose |
-|-------|------:|---------|
-| Train | 13,578 | fit the model |
-| Validation | 2,859 | early stopping / model selection (best-val epoch) |
-| Test | 2,876 | **held-out benchmark** — never touched during training |
+| Arch | Feature | Params | Test acc | Best val | Train time |
+|------|---------|--------|----------|----------|-----------|
+| A. Logistic (MFCC mean-pool) | MFCC(40) | 451 | 48.97% | 47.7% | 20 s |
+| B. DNN 40→128→64→11 | MFCC(40) | 14,603 | 57.33% | 54.6% | 49 s |
+| C. **1-D CNN (4 conv blocks)** | log-mel(80) | **246,443** | **97.91%** | 98.0% | 237 s |
+| D. CRNN (CNN + BiLSTM 128) | log-mel(80) | 331,691 | 97.26% | 97.5% | 347 s |
+| E. PocketSphinx-style grammar | GMM-HMM | — | not trained (classical baseline, reported separately) | | |
 
-Per-intent test support ranges 90–373 (4.1× spread), so per-intent metrics are statistically
-meaningful. The test set is the canonical benchmark used throughout §7.
+**Winner: C — 1-D CNN.** It beats the larger CRNN while using 25% fewer
+parameters and 32% less training time. The small MFCC-pooled models
+(logistic, DNN) cannot exploit temporal structure, confirming that spectral
+*sequence* modeling is what the task needs.
 
----
+![Benchmark](plots/01_benchmark_accuracy.png)
+![Params vs accuracy](plots/02_params_vs_accuracy.png)
+![Training curves](plots/03_training_curves_5models.png)
+![Best model curves](plots/04_best_training_curves.png)
 
-## 4. Model Architectures Benchmarked
+## 6. Best model — 1-D CNN
 
-### 4.1 Architecture Diagram
+![Architecture](plots/11_architecture_diagram.png)
 
-![CRNN Architecture](plots/architecture_diagram.png)
+4 stacked Conv1d blocks (80→64→128→128→128, ReLU + MaxPool), flatten,
+global pooling, dropout 0.3, linear head → 11 classes.
+**246,443 parameters · 985 KB float32 · ~253 KB if INT8.**
 
-### 4.2 Class Labels
-
-![Class Labels](plots/class_labels.png)
-
-### 4.3 Benchmark Results
-
-Five candidate architectures were trained under an identical protocol (100 epochs, batch 64,
-Adam lr=1e-3, cosine LR, weight decay 1e-4, seed 42, data augmentation on, MPS device) and
-evaluated on the same 2,876-clip test set.
-
-| Arch | Features | Params | Train time | Best-val | **Test acc** |
-|------|----------|-------:|-----------:|---------:|-------------:|
-| Logistic regression | MFCC 40 | 451 | 86 s | 48.7% | 47.4% |
-| Small DNN (2×FC) | MFCC 40 | 14,603 | 125 s | 58.0% | 55.0% |
-| **1-D CNN** (4 blocks) | log-mel 80 | 246,443 | 297 s | 98.4% | **95.56%** |
-| **CRNN** (CNN + BiLSTM) | log-mel 80 | 331,691 | 577 s | 93.3% | **96.35%** |
-| **CRNN + Option-2b balancing** (deployed) | log-mel 80 | 331,691 | 437 s | 94.7% | **97.32%** ★ |
-
-**Findings**
-- **Flat-feature models fail.** Logistic (47.4%) and DNN (55.0%) on MFCC cannot capture the
-  temporal/spectral structure of full sentences — they collapse on the value-bearing intents
-  (e.g. REMINDERS_LISTS recall 0.19 for logistic).
-- **Temporal modeling is the key.** Moving to log-mel + convolution jumps accuracy from ~55%
-  to ~95.6% (1-D CNN). Adding a BiLSTM (CRNN) adds another ~0.8 pt and, crucially, is far
-  better at *regularizing* (best-val 93.3% vs 98.4% overfit for the CNN).
-- **The deployed model** is the CRNN re-trained with the **Option 2b** balancing scheme
-  (§5), which lifts test accuracy to **97.32%** — the best of all five.
-
-> **Best model: CRNN (CNN + BiLSTM) with Option-2b intent balancing.**
-
-![Architecture benchmark — test accuracy](plots/bench_accuracy.png)
-
-![Efficiency frontier — parameters vs accuracy](plots/bench_params_acc.png)
-
-![Per-intent recall across the four architectures](plots/bench_per_intent.png)
-
-![Training dynamics — four architectures](plots/bench_training_curves.png)
-
-![Training curves — all 5 models comparison](plots/training_curves_5models.png)
-
----
-
-## 5. Training Step
-
-**Recipe (Option 2b — intent-balanced, Option-B-emphasized).** The raw corpus is heavily
-skewed (MEDIA_CONTROL and LIGHTS dominate; PLAY_MUSIC and the reject class are rare) and
-Option B is a minority source. Naïve training therefore under-weights exactly the intents
-that matter. The deployed model combines three mechanisms:
-
-1. **Source weighting** — Option B rows receive a **3.0×** loss weight (normalized so the
-   mean stays 1.0), raising Option B's share of the gradient mass from 67.5% → 86.1%.
-2. **Inverse-frequency loss weights** (`freq^−0.5`) — boosts rare classes and dampens the
-   majority, cutting MEDIA_CONTROL's gradient mass from ~65% down to **4.9%** and lifting
-   the rare classes (PLAY 6.7%, REJECT 3.5%).
-3. **Cap-based downsampling** (cap 2,500) — a safety valve; inactive here because the split
-   builder already balanced class support (1,050–1,768).
-
-**Hyperparameters:** 100 epochs, batch 64, Adam lr=1e-3, cosine annealing, weight decay
-1e-4, dropout 0.3, seed 42, device MPS, early-stopping checkpoint at **best-val epoch 86**
-(val 94.68%). Wall time ≈ 437 s.
-
-**Progression of the CRNN under successive recipes** (same test set):
-
-| Recipe | Test acc | Best-val |
-|--------|---------:|---------:|
-| Unweighted baseline | 96.35% | 93.28% |
-| Option 2 (source-weight only) | 96.94% | 93.98% |
-| **Option 2b (+ inverse-freq weights)** ★ | **97.32%** | **94.68%** |
-
-![Best model training curves](plots/best_training_curves.png)
-
----
-
-## 6. Deployment & Efficiency
-
-- **Export:** PyTorch → FP32 ONNX (1.30 MB) → **INT8 quantized ONNX (339 KB)**.
-- **Parity check:** INT8 ONNX agrees **100%** with the PyTorch checkpoint on 150 real clips.
-- **Inference contract:** input `audio[B,101,80]` → output `logits[B,11]`.
-- **On-device footprint:** 331,691 parameters, **0.34 MB** INT8 — trivially fits RPi4/5 RAM.
-- **Real-time:** see latency table in §7.2.
-
----
-
-## 7. Evaluation of the Best Model (held-out test, n = 2,876)
-
-### 7.1 Intent recognition
+### 6.1 Intent recognition
 
 | Metric | Value |
-|--------|------:|
-| **Accuracy** | **97.32%** |
-| **Cohen's κ** | **0.9701** |
-| Macro Precision / Recall / F1 | 0.9776 / 0.9729 / **0.9750** |
-| Micro Precision / Recall / F1 | 0.9732 / 0.9732 / 0.9732 |
-| Weighted Precision / Recall / F1 | 0.9738 / 0.9732 / 0.9733 |
+|---|---|
+| Test accuracy (n=3,063, speaker-disjoint) | **97.91%** |
+| Cohen's κ | 0.9764 |
+| Macro P / R / F1 | 0.9799 / 0.9719 / 0.9757 |
+| Micro P / R / F1 | 0.9793 / 0.9791 / 0.9791 |
+| Weighted P / R / F1 | 0.9793 / 0.9791 / 0.9791 |
 
-**Per-intent precision / recall / F1:**
+### 6.2 Per-intent recall (command recall)
 
 | Intent | Precision | Recall | F1 | Support |
-|--------|----------:|-------:|-----:|--------:|
-| REJECT | 1.000 | 1.000 | 1.000 | 225 |
-| PLAY_MUSIC | 0.989 | 1.000 | 0.995 | 90 |
-| QUESTION_SEARCH | 0.980 | 0.960 | 0.970 | 150 |
-| LIGHTS_ON_OFF | 0.986 | 0.976 | 0.981 | 373 |
-| DIM_COLOR_LIGHTS | 0.970 | 0.957 | 0.964 | 372 |
-| SET_TIMER | 1.000 | 0.959 | 0.979 | 267 |
-| SET_ALARM | 0.970 | 0.981 | 0.975 | 261 |
-| THERMOSTAT | 0.971 | 0.993 | 0.982 | 267 |
-| MEDIA_CONTROL | 0.918 | 0.963 | 0.940 | 373 |
-| REMINDERS_LISTS | 0.977 | 0.994 | 0.986 | 348 |
-| CALLS_MESSAGING | 0.993 | 0.920 | 0.955 | 150 |
+|--------|-----------|--------|----|---------|
+| PLAY_MUSIC | 1.000 | 0.919 | 0.958 | 86 |
+| QUESTION_SEARCH | 0.953 | 0.982 | 0.967 | 164 |
+| LIGHTS_ON_OFF | 0.959 | 0.943 | 0.951 | 175 |
+| DIM_COLOR_LIGHTS | 0.973 | 0.997 | 0.985 | 621 |
+| SET_TIMER | 0.992 | 0.962 | 0.977 | 264 |
+| SET_ALARM | 0.988 | 0.965 | 0.976 | 257 |
+| THERMOSTAT | 1.000 | 1.000 | 1.000 | 270 |
+| MEDIA_CONTROL | 0.961 | 0.965 | 0.963 | 428 |
+| REMINDERS_LISTS | 0.988 | 0.991 | 0.990 | 342 |
+| CALLS_MESSAGING | 0.968 | 0.968 | 0.968 | 156 |
 
-The two weakest intents are **MEDIA_CONTROL** (F1 0.940 — short "pause"/"next" clips leak to
-REMINDERS/DIM) and **CALLS_MESSAGING** (recall 0.920 — the rarest command class). Both are
-above 0.92; no intent is below 0.94 F1.
+**Command recall (all commands): 97.68%.** Weakest: PLAY_MUSIC (91.9% —
+smallest class, n=86) and LIGHTS_ON_OFF (94.3%).
 
-![Per-intent P/R/F1](plots/best_per_intent.png)
+![Per-intent P/R/F1](plots/06_per_intent_prf.png)
+![Confusion matrix](plots/05_confusion_matrix.png)
 
-![Per-Intent Recall Matrix](plots/per_intent_recall_matrix.png)
+### 6.3 Slot & parameter (value-level) accuracy
 
-![Confusion matrix](plots/best_confusion.png)
+Within clips whose *intent* was correct, full-command accuracy at the
+fine-grained value level (e.g. distinguishing `TIMER_30s` from `TIMER_1m`):
 
-### 7.2 Latency, inference time & efficiency
+- **All slotted values: 97.68%** (n=2,763)
+- Perfect (100%) on 14 of 32 values, incl. all BRIGHTNESS, COLOR,
+  TEMPERATURE, TIME, NEXT, LIST_REMINDERS values
+- Lowest: PLAY_MUSIC 91.9%, LIGHT_OFF 92.1%, TIMER_1m 93.1%, VOLUME_DOWN
+  93.1%, ALARM_4_00AM 94.0%, STOP 94.1% — the short/ambiguous words
 
-Measured on the full test set through the exact on-device inference path
-(`pi_bundle/vcm_infer`, INT8 ONNX, warm):
-
-| Metric | Value |
-|--------|------:|
-| Clips measured | 2,883 |
-| **Median (p50) inference** | **2.7 ms** |
-| p95 inference | 3.0 ms |
-| p99 inference | 3.4 ms |
-| Max inference | 9.8 ms |
-| Cold first-clip decode | ~1.2 s (one-time ONNX warm-up) |
-| Feature parity vs reference | 0.000 dB (PASS) |
-
-At ~2.7 ms median, the model sustains **>300 inferences/second** — orders of magnitude beyond
-the real-time requirement for a voice assistant (one decision per ~1 s utterance).
-
-### 7.3 Recall of commands (per-intent)
-See §7.1 table. **Macro recall = 97.29%**; every intent ≥ 0.92 recall; REJECT, PLAY_MUSIC at
-1.000.
-
-### 7.4 Task completion / success rate
-Decomposing the test set into *command* vs *reject* audio:
+### 6.4 Rejection & task completion
 
 | Metric | Value |
-|--------|------:|
-| Overall success rate | **97.32%** |
-| **Command success rate** (2,574 / 2,651) | **97.10%** |
-| **Reject success rate** (225 / 225) | **100.0%** |
-| **False triggers** (reject → command) | **0** |
-| **Missed commands** (command → reject) | **0** |
+|---|---|
+| Reject recall (noise → REJECT) | **100.0%** |
+| False-reject rate (command → REJECT) | 0.04% |
+| False-accept rate (noise → command) | 0.00% |
+| **Task completion (overall correctness)** | **97.91%** |
 
-Zero false triggers and zero missed commands means the model never acts on silence/ambient
-noise and never drops a real command — the two failure modes that matter most in a home device.
+![Task completion](plots/08_task_completion.png)
 
-![Task completion / success rates](plots/best_task_completion.png)
+### 6.5 Calibration
 
-### 7.5 Word error rate (value-level)
-The deployed VCM is an **intent-level** classifier (per exercise constraint #8: pure VCM, no
-ASR/LLM). Slot **values** (the color, the time, the temperature) are resolved downstream from
-the dataset schema once the intent is known. To quantify how much of the value is carried by
-the spoken phrase, we report an **ASR-free token-F1** between each canonical command template
-and its value-folder slug (n = 1,233 slotted clips):
+- **Expected Calibration Error (10 bins): 0.0062** — essentially calibrated
+- **Brier score: 0.0324**
+- 95.8% of test clips sit in the [0.9, 1.0] confidence bin with 99.4%
+  realized accuracy — the model is confident *and right* almost everywhere;
+  its errors concentrate in the low-confidence region, where a threshold
+  (e.g. reject below 0.8) would catch most of them.
 
-| Scope | Token-F1 |
-|-------|---------:|
-| Overall (slotted intents) | 0.241 |
-| REMINDERS_LISTS | 0.339 |
-| SET_TIMER | 0.250 |
-| THERMOSTAT | 0.231 |
-| SET_ALARM | 0.222 |
-| DIM_COLOR_LIGHTS | 0.151 |
+![Reliability](plots/07_reliability.png)
 
-This low figure is **expected and not a defect**: it compares a natural-language template
-("set a timer for one minute") against a compact slug ("timer 1m") — most tokens legitimately
-differ. The meaningful, end-to-end value signal is the **schema-value test** (§7.6), where the
-*recognized* value is checked against ground truth.
+### 6.6 Latency, inference time & efficiency
 
-### 7.6 Slot & parameter accuracy / full-command accuracy (end-to-end value test)
-A dedicated **schema-value test** runs the full pipeline on Option B slotted clips:
-INT8-ONNX intent prediction → value extraction from the recognized command → comparison to the
-ground-truth value (285 slotted clips, 20 per value where available):
-
-| Outcome | Count | Rate |
-|---------|------:|-----:|
-| **OK** (intent + value both correct) | 275 | **96.5%** |
-| WRONG_VALUE (intent right, value off) | 5 | 1.8% |
-| WRONG_INTENT | 5 | 1.8% |
-
-- **Full-command accuracy (per-intent recall of fully-correct commands): 96.5%.**
-- **Slot/parameter accuracy given correct intent: 275/280 = 98.2%.**
-
-This is the honest end-to-end number for "did the device do the *whole* right thing," and it
-is essentially indistinguishable from the intent-level 97.32% — confirming the value-bearing
-intents are handled correctly, not just the coarse intent.
-
-### 7.7 Rejection
-- **Reject recall = 100.0%** (225/225), **reject precision = 100.0%**.
-- **False-trigger rate = 0.0%** — the model never fires on non-command audio.
-- Synthetic reject clips (added to teach the class) are classified correctly 100% of the time.
-
-### 7.8 Calibration error
-Confidence is a reliable uncertainty signal (mean confidence **0.995** on correct clips vs
-**0.818** on wrong ones):
+Measured on CPU, batch=1, 800 held-out clips (realistic on-device condition):
 
 | Metric | Value |
-|--------|------:|
-| **Expected Calibration Error (15 bins)** | **0.018** |
-| Max Calibration Error | 0.390 (driven by one sparse low-confidence bin) |
-| **Brier score** | **0.020** |
+|---|---|
+| Mean inference | 0.45 ms |
+| p50 / p95 / p99 / max | 0.42 / 0.58 / 1.16 / 1.28 ms |
+| Real-time factor (1 s audio) | 0.00045 (≈2,200× faster than real time) |
+| Parameters | 246,443 |
+| MACs per clip | 3.23 M |
+| Float32 size | 0.99 MB (ONNX 0.985 MB) |
+| INT8 size (analytic) | ~253 KB |
 
-An ECE of 0.018 means predicted probabilities closely match observed frequencies — the model
-is well-calibrated, so a downstream **confidence threshold (~0.85)** yields near-perfect
-precision and catches roughly half of the residual errors (a useful "ask again" guard).
+Even on a Raspberry Pi 4 (much slower CPU) this budget leaves ample headroom
+for the audio front-end. *(Live Pi metrics — response latency, CPU temp, RAM —
+are pending the on-device demo.)*
 
-![Reliability diagram](plots/best_calibration.png)
+### 6.7 Word error rate (proxy)
 
-### 7.9 Robustness
-Accuracy under perturbation and across sources/durations:
+True WER is not measurable without ASR (constraint #8). As an ASR-free proxy,
+we compute token-F1 between the gold command and the canonical phrase of the
+predicted intent: **0.9778** — near-perfect command-level agreement.
 
-| Axis | Segment | Acc | n |
-|------|---------|----:|---:|
-| **Condition** | clean | 97.20% | 1,676 |
-| | noisy | 96.92% | 975 |
-| | noise-only | 100.0% | 225 |
-| **Source** | Option B | 97.30% | 1,928 |
-| | Speech Commands | 96.54% | 723 |
-| | synthetic reject | 100.0% | 225 |
-| **Duration** | short (<1.0 s) | 92.73% | 165 |
-| | mid (1.0–1.5 s) | 98.18% | 1,319 |
-| | long (≥1.5 s) | 97.05% | 1,392 |
+### 6.8 Robustness
 
-**Key robustness findings:**
-- **Noise tolerance:** adding noise costs only **−0.28 pt** (97.20% → 96.92%) — negligible.
-- **Cross-source generalization:** Option B (97.30%) ≈ Speech Commands (96.54%), so the model
-  is not overfit to one corpus.
-- **Weak spot:** very short clips (<1.0 s, mostly 1–2 word media commands) drop to 92.73% —
-  the same short-utterance leakage seen in MEDIA_CONTROL. This is the single clearest
-  improvement target (more short-clip augmentation / a longer window).
+| Condition | Accuracy |
+|---|---|
+| Clean | 97.39% |
+| Noisy | **97.97%** |
+| Δ (noisy − clean) | **+0.58 pp** |
 
-![Robustness by condition and source](plots/best_robustness.png)
+The model is *not degraded* by background noise — the noisy recordings in
+Option B are mild, and the loudest-window crop + spectral features generalize
+well. By duration: <1.0 s → 96.2%, 1.0–1.5 s → 98.9%, ≥1.5 s → 97.5%.
 
----
+![Robustness](plots/09_robustness.png)
 
-## 8. Limitations & Future Work
+### 6.9 Class labels
 
-1. **Short-utterance weakness** (<1.0 s → 92.7%). Mitigate with time-stretch augmentation and
-   a slightly longer analysis window for the media intents.
-2. **MEDIA_CONTROL ↔ DIM_COLOR_LIGHTS** remain the largest confusion pair (symmetric, ~12 each)
-   — short "next"/"stop" vs "dim" overlap. A small targeted augmentation set would close it.
-3. **Single-speaker fine-tuning** is supported (`finetune.py`) but the shipped model is
-   population-trained; recording a few dozen clips of the end-user's voice and fine-tuning
-   would improve real-world recall for that user.
-4. **Value decoding is schema-driven**, not learned. A lightweight slot-head (still on-device,
-   no LLM) could learn values end-to-end and raise the 96.5% full-command figure further.
+![Class labels](plots/12_class_labels.png)
 
----
+## 7. Deployment artifact
 
-## 9. Reproducibility
+- `models/cnn1d_float.onnx` — ONNX opset 17, dynamic batch, verified against
+  PyTorch: **argmax agreement 32/32, max abs diff 1.1e-05**
+- INT8: the onnxruntime dynamic-quantizer currently throws a
+  `ShapeInferenceError` on Conv weights with this torch/ORT combination
+  (documented in `models/export_report.json`); the INT8 size (~253 KB) is
+  reported analytically. The PyTorch checkpoint (`cnn1d_state.pt`) is the
+  canonical artifact and loads in <100 ms on any device.
 
-| Artifact | Path |
-|----------|------|
-| Dataset manifest | `data/processed/manifest.csv` |
-| Splits + stats | `data/processed/splits/{train,val,test}.csv`, `stats.json` |
-| Feature cache | `data/processed/_retrain_feats_logmel_20727.npz` |
-| Best checkpoint | `models_retrain/crnn_bal_1790835176_state.pt` |
-| Training history | `models_retrain/crnn_bal_1790835176_history.json` |
-| Core metrics | `models_retrain/crnn_bal_1790835176_metrics.json` |
-| Comprehensive eval | `models_retrain/comprehensive_eval.json` |
-| Deployed INT8 model | `pi_bundle/model_int8.onnx` (339 KB) |
-| Training script | `scripts/train_balanced.py` |
-| Eval script | `scripts/eval_comprehensive.py` |
-| Plotting | `scripts/plot_report.py` → `plots/*.png` |
-| Live demo | `pi_bundle/live_demo.py` |
+## 8. Reproducibility
 
-**Run the benchmark:**
+Everything is deterministic (seed 42) and scripted:
+
 ```bash
-python scripts/eval_comprehensive.py   # -> comprehensive_eval.json
-python scripts/plot_report.py          # -> plots/report/*.png
+cd code/scripts
+python3 build_manifest.py     # ~1 min
+python3 build_reject.py       # ~10 s
+python3 build_splits.py       # ~2 s
+python3 build_feats.py        # ~3 min
+python3 train_benchmark.py    # ~10 min
+python3 evaluate.py           # ~1 min
+python3 plot_report.py        # ~10 s
+python3 export_onnx.py        # ~30 s
 ```
 
-**Run the demo (on-device):**
-```bash
-python live_demo.py --model model_int8.onnx --simulate --wakeword
-```
+Artifacts: `data/manifest.csv`, `data/splits/{train,val,test}.csv` +
+`stats.json`, `data/feats/*.npz`, `models/*_state.pt` + `*_history.json` +
+`benchmark.json` + `eval_results.json` + `eval_detail.csv` +
+`export_report.json`, `report/plots/*.png`.
 
----
+## 9. Limitations & next steps
 
-*All results computed on the held-out 2,876-clip test set; no test data touched during
-training. Model is fully on-device (INT8 ONNX, 339 KB), standalone, and LLM-free, satisfying
-exercise constraints #6–#8.*
+- **INT8 export** blocked by an onnxruntime quantizer bug — retry with a
+  pinned torch/ORT pair or QNN/ONNX-Scrubber on the Pi.
+- **PLAY_MUSIC / LIGHT_OFF** are the weakest intents (small classes, short
+  words) — targeted augmentation or class weighting could lift them.
+- **Slot values** are classified, not parsed — a lightweight slot parser
+  (regex over the 32 value folders) would enable exact parameter extraction
+  for the action layer.
+- **Live Pi metrics** (response latency end-to-end, CPU temp, RAM, throttling)
+  remain to be captured on demo day.

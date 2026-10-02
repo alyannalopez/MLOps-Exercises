@@ -1,135 +1,100 @@
-# ME2 — Voice Controlled Smart Device (VCM)
+# ME2 — Voice Command Model (VCM) for Smart Devices
 
-**Course:** AI231 · MLOps Exercises  
-**Author:** Alyanna Lopez  
-**Date:** October 2026  
-**Target:** Raspberry Pi 4/5 — fully on-device, no cloud, no LLM
+A tiny, on-device voice command classifier for the most common smart-device
+commands. Trained **exclusively on the Option B dataset** (Sir Mark's MEX2
+corpus) — 18,375 clips, 100 speakers, 10 intents + rejection. No ASR, no
+cloud: a small neural net maps 1-second audio windows directly to a command.
 
-## Overview
+## Headline result
 
-A tiny **Voice Command Model (VCM)** that maps spoken smart-home utterances to one of
-**10 command intents** (plus a rejection class) using a **CRNN** (1-D CNN + BiLSTM)
-consuming a 101×80 log-mel spectrogram. Exported to **INT8 ONNX (339 KB)**, running at
-**~2.7 ms median inference** — comfortably real-time on RPi4/5.
+| Metric | Value |
+|---|---|
+| Best architecture | **1-D CNN** (log-mel, 246,443 params) |
+| Test accuracy (speaker-disjoint) | **97.91%** |
+| Macro F1 | 97.57% |
+| Command recall | 97.68% |
+| Reject recall | 100% |
+| Calibration (ECE) | 0.0062 |
+| Float32 / INT8 size | 0.99 MB / ~253 KB |
+| CPU inference (1 s clip) | 0.42 ms (p50) |
 
-**Headline result:** **97.32% test accuracy** (Cohen's κ = 0.970) on a held-out 2,876-clip
-benchmark. Best of 5 benchmarked architectures. Zero false triggers, zero missed commands.
+Full numbers: [`report/VCM_Final_Report.md`](report/VCM_Final_Report.md) and
+[`models/eval_results.json`](models/eval_results.json).
 
-## Repository Structure
+## Repository layout
 
 ```
 ME2/
-├── README.md                  ← this file
-├── labels.csv                 ← 10-intent taxonomy + example utterances
+├── ME2_Instructions-and-Notes.pdf   # exercise instructions
+├── README.md                        # this file
 ├── code/
-│   ├── scripts/               ← training, ETL, benchmarking, evaluation scripts
-│   │   ├── etl.py             ← data preprocessing pipeline
-│   │   ├── make_splits.py     ← speaker-disjoint balanced splits
-│   │   ├── train.py           ← baseline training (5 architectures)
-│   │   ├── train_balanced.py  ← Option-2b balanced training (deployed model)
-│   │   ├── benchmark_models.py← 5-arch comparison
-│   │   ├── eval_comprehensive.py ← full metric battery
-│   │   ├── export_and_bench.py ← ONNX export + INT8 quantization
-│   │   ├── vcm_infer.py       ← inference engine
-│   │   └── ...
-│   └── pi_bundle/             ← deployable bundle for Raspberry Pi
-│       ├── model_int8.onnx    ← 339 KB INT8 model
-│       ├── model_float.onnx   ← 1.3 MB FP32 model
-│       ├── vcm_infer.py       ← inference loop
-│       ├── live_demo.py       ← real-time mic demo (wake word + VCM)
-│       ├── wakeword.py        ← openWakeWord integration
-│       ├── mac_handler.py     ← macOS-specific handlers
-│       ├── features.py        ← log-mel feature extraction
-│       ├── SETUP_GUIDE.md     ← beginner-friendly Pi setup
-│       └── NUMBERS_GUIDE.md   ← slot-filling guide
-├── models/                    ← exported ONNX + PyTorch checkpoints (4 archs)
-├── models_retrain/            ← retrained checkpoints + histories + summary
-├── models_v3/                 ← v3 evaluation results
-├── report/
-│   ├── VCM_Final_Report.md    ← full technical report (403 lines)
-│   ├── VCM_Executive_OnePager.md
-│   ├── VCM_Model_Evaluation_Report.xlsx
-│   └── plots/                 ← all figures (14 PNGs)
-│       ├── architecture_diagram.png
-│       ├── class_labels.png
-│       ├── bench_accuracy.png
-│       ├── bench_params_acc.png
-│       ├── bench_per_intent.png
-│       ├── bench_training_curves.png
-│       ├── training_curves_5models.png
-│       ├── per_intent_recall_matrix.png
-│       ├── best_per_intent.png
-│       ├── best_confusion.png
-│       ├── best_calibration.png
-│       ├── best_robustness.png
-│       ├── best_task_completion.png
-│       └── best_training_curves.png
-├── schema_value_test.json     ← end-to-end slot value test results
-├── schema_value_test.py       ← slot value test script
-├── validation_full.json       ← full-set validation (2,883 clips)
-└── validate_full.py           ← full-set validation script
+│   └── scripts/                     # full reproducible pipeline
+│       ├── label_map.py             # 32 raw folders -> 10 intents (source of truth)
+│       ├── features.py              # MFCC (T,40) / log-mel (T,80) extractor
+│       ├── models.py                # 4 architectures, shared (B,T,F)->(B,11) contract
+│       ├── build_manifest.py        # step 1: scan raw data -> manifest.csv
+│       ├── build_reject.py          # step 2: synthesize REJECT noise class
+│       ├── build_splits.py          # step 3: speaker-disjoint 70/15/15 split
+│       ├── build_feats.py           # step 4: extract + cache features (.npz)
+│       ├── train_benchmark.py       # step 5: train all 4 archs, benchmark
+│       ├── evaluate.py              # step 6: full metric battery
+│       ├── plot_report.py           # step 7: all report figures
+│       └── export_onnx.py           # step 8: ONNX float32 + int8 export
+├── data/
+│   ├── raw/optionB_v2/              # symlink -> Option B dataset (18,375 wav)
+│   ├── manifest.csv                 # 18,375 rows: path, intent, speaker, condition
+│   ├── reject/                      # 900 synthesized noise clips (REJECT class)
+│   ├── splits/{train,val,test}.csv  # speaker-disjoint split + stats.json
+│   └── feats/*.npz                  # cached MFCC + log-mel features
+├── models/                          # checkpoints, histories, benchmark, eval, ONNX
+└── report/
+    ├── VCM_Final_Report.md          # full technical report
+    └── plots/                       # 12 figures
 ```
 
-## Quick Start (Raspberry Pi)
+## Reproduce from scratch
 
-See [`code/pi_bundle/SETUP_GUIDE.md`](code/pi_bundle/SETUP_GUIDE.md) for the full
-beginner-friendly walkthrough. In short:
+Requires: Python 3.10+, `torch`, `librosa`, `soundfile`, `pandas`,
+`scikit-learn`, `matplotlib`, `onnx`, `onnxruntime`.
 
-1. Flash SD card with Raspberry Pi OS (64-bit)
-2. Copy `code/pi_bundle/` to the Pi
-3. `pip install onnxruntime openwakeword numpy scipy`
-4. `python3 live_demo.py` — speak commands, watch them execute
+```bash
+cd code/scripts
+python3 build_manifest.py     # ~1 min   (scan raw data)
+python3 build_reject.py       # ~10 s    (synthesize reject class)
+python3 build_splits.py       # ~2 s     (speaker-disjoint split, 0 leaks)
+python3 build_feats.py        # ~3 min   (MFCC + log-mel, cached)
+python3 train_benchmark.py    # ~10 min  (4 archs, MPS, seed 42)
+python3 evaluate.py           # ~1 min   (full metric battery)
+python3 plot_report.py        # ~10 s    (12 figures)
+python3 export_onnx.py        # ~30 s    (float32 + int8, parity check)
+```
 
-## Key Results
+All steps are deterministic (seed 42) and idempotent — rerunning overwrites
+outputs cleanly.
 
-| Metric | Value |
-|--------|------:|
-| Test accuracy | **97.32%** |
-| Cohen's κ | 0.9701 |
-| Macro F1 | 0.9750 |
-| Reject accuracy | 100% |
-| False triggers | 0 |
-| Missed commands | 0 |
-| INT8 model size | 339 KB |
-| Median inference | 2.7 ms |
-| Parameters | 331,691 |
+## The 10 intents
 
-## Architecture Benchmark (5 models)
+| # | Intent | Option B raw folders |
+|---|--------|----------------------|
+| 0 | PLAY_MUSIC | PLAY_MUSIC |
+| 1 | QUESTION_SEARCH | WEATHER, TIME |
+| 2 | LIGHTS_ON_OFF | LIGHT_ON, LIGHT_OFF |
+| 3 | DIM_COLOR_LIGHTS | BRIGHTNESS_{20,60,100}, COLOR_{RED,GREEN,BLUE,YELLOW} |
+| 4 | SET_TIMER | TIMER_{10s,30s,1m} |
+| 5 | SET_ALARM | ALARM_{4_00AM,8_00AM,9_00PM} |
+| 6 | THERMOSTAT | TEMPERATURE_{18,22,26} |
+| 7 | MEDIA_CONTROL | PAUSE, STOP, NEXT, VOLUME_UP, VOLUME_DOWN |
+| 8 | REMINDERS_LISTS | CREATE_REMINDER_{STUDY,EXERCISE,DRINK_WATER}, LIST_REMINDERS |
+| 9 | CALLS_MESSAGING | CALL, MESSAGE |
+| 10 | REJECT | synthesized ambient noise (no speech) |
 
-| Architecture | Params | Test Acc |
-|-------------|-------:|---------:|
-| Logistic regression | 451 | 47.4% |
-| Small DNN | 14,603 | 55.0% |
-| 1-D CNN | 246,443 | 95.56% |
-| CRNN | 331,691 | 96.35% |
-| **CRNN + Option-2b** ★ | 331,691 | **97.32%** |
+## Data & method highlights
 
-## Figures
-
-![Architecture](report/plots/architecture_diagram.png)
-
-![Class Labels](report/plots/class_labels.png)
-
-![Benchmark Accuracy](report/plots/bench_accuracy.png)
-
-![Training Curves (5 models)](report/plots/training_curves_5models.png)
-
-![Per-Intent Recall Matrix](report/plots/per_intent_recall_matrix.png)
-
-## Dataset
-
-Multi-source corpus (141,681 clips total):
-- Google Speech Commands (78,133)
-- SLURP (40,247)
-- **Option B / MEX2 — Mark Andrian (18,375)** — slotted full-sentence commands
-- FLEURS (3,266)
-- Snips (1,660)
-- Synthetic reject (1,500)
-
-Speaker-disjoint split: 13,578 train / 2,859 val / 2,876 test.
-
-## Reproducibility
-
-All training, evaluation, and export scripts are in `code/scripts/`. The exact
-hyperparameters, data splits, and random seeds are documented in
-[`report/VCM_Final_Report.md`](report/VCM_Final_Report.md) §5 and §9.
+- **Dataset**: Option B only (per the revised instructions). 18,375 clips,
+  100 speakers, clean + noisy recordings, 32 fine-grained value folders.
+- **Split**: *speaker-disjoint* 70/15/15 — no speaker appears in more than
+  one split (verified: 0 leaks). This tests generalization to unknown voices.
+- **Features**: loudest-1-second window, 16 kHz, MFCC(40) for the small
+  models, log-mel(80) for the CNN/CRNN.
+- **Training**: Adam, cosine LR, early stopping (patience 25), seed 42, MPS.
+- **Constraint honored**: no ASR anywhere — classification only.

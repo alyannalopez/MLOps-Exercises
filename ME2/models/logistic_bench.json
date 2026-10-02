@@ -1,0 +1,8 @@
+{
+  "name": "logistic",
+  "params": 451,
+  "test_acc": 0.4897,
+  "best_val": 0.4773,
+  "train_time_s": 20.3,
+  "epochs_run": 33
+}

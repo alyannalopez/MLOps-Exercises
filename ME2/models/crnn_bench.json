@@ -1,0 +1,8 @@
+{
+  "name": "crnn",
+  "params": 331691,
+  "test_acc": 0.9726,
+  "best_val": 0.9751,
+  "train_time_s": 346.6,
+  "epochs_run": 67
+}

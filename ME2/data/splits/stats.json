@@ -1,0 +1,59 @@
+{
+  "seed": 42,
+  "frac": [
+    0.7,
+    0.15
+  ],
+  "total": 19275,
+  "positive_total": 18375,
+  "reject_total": 900,
+  "speakers": 100,
+  "per_split": {
+    "train": 13201,
+    "val": 3011,
+    "test": 3063
+  },
+  "speaker_leaks": 0,
+  "train_positive": 12901,
+  "train_reject": 300,
+  "train_per_intent": {
+    "DIM_COLOR_LIGHTS": 2867,
+    "MEDIA_CONTROL": 1976,
+    "REMINDERS_LISTS": 1626,
+    "THERMOSTAT": 1258,
+    "SET_TIMER": 1230,
+    "SET_ALARM": 1215,
+    "LIGHTS_ON_OFF": 797,
+    "QUESTION_SEARCH": 766,
+    "CALLS_MESSAGING": 752,
+    "PLAY_MUSIC": 414
+  },
+  "val_positive": 2711,
+  "val_reject": 300,
+  "val_per_intent": {
+    "DIM_COLOR_LIGHTS": 616,
+    "MEDIA_CONTROL": 418,
+    "REMINDERS_LISTS": 345,
+    "THERMOSTAT": 267,
+    "SET_ALARM": 258,
+    "SET_TIMER": 247,
+    "LIGHTS_ON_OFF": 164,
+    "CALLS_MESSAGING": 153,
+    "QUESTION_SEARCH": 153,
+    "PLAY_MUSIC": 90
+  },
+  "test_positive": 2763,
+  "test_reject": 300,
+  "test_per_intent": {
+    "DIM_COLOR_LIGHTS": 621,
+    "MEDIA_CONTROL": 428,
+    "REMINDERS_LISTS": 342,
+    "THERMOSTAT": 270,
+    "SET_TIMER": 264,
+    "SET_ALARM": 257,
+    "LIGHTS_ON_OFF": 175,
+    "QUESTION_SEARCH": 164,
+    "CALLS_MESSAGING": 156,
+    "PLAY_MUSIC": 86
+  }
+}

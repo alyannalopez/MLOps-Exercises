@@ -1,0 +1,534 @@
+{
+  "model": "cnn1d",
+  "kind": "logmel",
+  "device": "mps",
+  "n_test": 3063,
+  "classes": [
+    "PLAY_MUSIC",
+    "QUESTION_SEARCH",
+    "LIGHTS_ON_OFF",
+    "DIM_COLOR_LIGHTS",
+    "SET_TIMER",
+    "SET_ALARM",
+    "THERMOSTAT",
+    "MEDIA_CONTROL",
+    "REMINDERS_LISTS",
+    "CALLS_MESSAGING"
+  ],
+  "accuracy": 0.9791,
+  "cohen_kappa": 0.9764,
+  "macro": {
+    "precision": 0.9799,
+    "recall": 0.9719,
+    "f1": 0.9757
+  },
+  "micro": {
+    "precision": 0.9793,
+    "recall": 0.9791,
+    "f1": 0.9791
+  },
+  "weighted": {
+    "precision": 0.9793,
+    "recall": 0.9791,
+    "f1": 0.9791
+  },
+  "per_intent": [
+    {
+      "intent": "PLAY_MUSIC",
+      "idx": 0,
+      "precision": 1.0,
+      "recall": 0.9186,
+      "f1": 0.9576,
+      "support": 86
+    },
+    {
+      "intent": "QUESTION_SEARCH",
+      "idx": 1,
+      "precision": 0.9527,
+      "recall": 0.9817,
+      "f1": 0.967,
+      "support": 164
+    },
+    {
+      "intent": "LIGHTS_ON_OFF",
+      "idx": 2,
+      "precision": 0.9593,
+      "recall": 0.9429,
+      "f1": 0.951,
+      "support": 175
+    },
+    {
+      "intent": "DIM_COLOR_LIGHTS",
+      "idx": 3,
+      "precision": 0.9733,
+      "recall": 0.9968,
+      "f1": 0.9849,
+      "support": 621
+    },
+    {
+      "intent": "SET_TIMER",
+      "idx": 4,
+      "precision": 0.9922,
+      "recall": 0.9621,
+      "f1": 0.9769,
+      "support": 264
+    },
+    {
+      "intent": "SET_ALARM",
+      "idx": 5,
+      "precision": 0.988,
+      "recall": 0.965,
+      "f1": 0.9764,
+      "support": 257
+    },
+    {
+      "intent": "THERMOSTAT",
+      "idx": 6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 270
+    },
+    {
+      "intent": "MEDIA_CONTROL",
+      "idx": 7,
+      "precision": 0.9605,
+      "recall": 0.965,
+      "f1": 0.9627,
+      "support": 428
+    },
+    {
+      "intent": "REMINDERS_LISTS",
+      "idx": 8,
+      "precision": 0.9883,
+      "recall": 0.9912,
+      "f1": 0.9898,
+      "support": 342
+    },
+    {
+      "intent": "CALLS_MESSAGING",
+      "idx": 9,
+      "precision": 0.9679,
+      "recall": 0.9679,
+      "f1": 0.9679,
+      "support": 156
+    }
+  ],
+  "confusion": [
+    [
+      79,
+      0,
+      0,
+      2,
+      0,
+      1,
+      0,
+      4,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      161,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      3,
+      0
+    ],
+    [
+      0,
+      1,
+      165,
+      3,
+      0,
+      0,
+      0,
+      6,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      2,
+      619,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      2,
+      4,
+      2,
+      254,
+      0,
+      0,
+      0,
+      2,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      3,
+      1,
+      248,
+      0,
+      5,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      270,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      1,
+      6,
+      1,
+      2,
+      0,
+      413,
+      2,
+      2,
+      0
+    ],
+    [
+      0,
+      2,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      339,
+      0,
+      0
+    ],
+    [
+      0,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      0,
+      151,
+      1
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      300
+    ]
+  ],
+  "command_recall": 0.9768,
+  "reject_recall": 1.0,
+  "false_reject_rate": 0.0004,
+  "false_accept_rate": 0.0,
+  "task_completion": 0.9791,
+  "reliability": [
+    {
+      "bin": [
+        0.3,
+        0.4
+      ],
+      "n": 6,
+      "mean_conf": 0.3741,
+      "acc": 0.3333
+    },
+    {
+      "bin": [
+        0.4,
+        0.5
+      ],
+      "n": 14,
+      "mean_conf": 0.4467,
+      "acc": 0.4286
+    },
+    {
+      "bin": [
+        0.5,
+        0.6
+      ],
+      "n": 18,
+      "mean_conf": 0.5457,
+      "acc": 0.5556
+    },
+    {
+      "bin": [
+        0.6,
+        0.7
+      ],
+      "n": 22,
+      "mean_conf": 0.6516,
+      "acc": 0.5455
+    },
+    {
+      "bin": [
+        0.7,
+        0.8
+      ],
+      "n": 34,
+      "mean_conf": 0.747,
+      "acc": 0.6471
+    },
+    {
+      "bin": [
+        0.8,
+        0.9
+      ],
+      "n": 34,
+      "mean_conf": 0.8576,
+      "acc": 0.8529
+    },
+    {
+      "bin": [
+        0.9,
+        1.0
+      ],
+      "n": 2935,
+      "mean_conf": 0.9984,
+      "acc": 0.9942
+    }
+  ],
+  "ece": 0.0062,
+  "brier": 0.0324,
+  "efficiency": {
+    "params": 246443,
+    "macs_per_clip": 3225928,
+    "size_fp32_mb": 0.99,
+    "size_int8_kb": 253.3
+  },
+  "latency_ms": {
+    "device": "cpu",
+    "n": 800,
+    "mean": 0.45,
+    "p50": 0.42,
+    "p95": 0.58,
+    "p99": 1.16,
+    "max": 1.28
+  },
+  "rtf": 0.00045,
+  "slot_value_acc": {
+    "ALARM_4_00AM": {
+      "acc": 0.9398,
+      "n": 83
+    },
+    "ALARM_8_00AM": {
+      "acc": 0.9889,
+      "n": 90
+    },
+    "ALARM_9_00PM": {
+      "acc": 0.9643,
+      "n": 84
+    },
+    "BRIGHTNESS_100": {
+      "acc": 1.0,
+      "n": 90
+    },
+    "BRIGHTNESS_20": {
+      "acc": 1.0,
+      "n": 90
+    },
+    "BRIGHTNESS_60": {
+      "acc": 1.0,
+      "n": 90
+    },
+    "CALL": {
+      "acc": 0.9487,
+      "n": 78
+    },
+    "COLOR_BLUE": {
+      "acc": 1.0,
+      "n": 89
+    },
+    "COLOR_GREEN": {
+      "acc": 1.0,
+      "n": 88
+    },
+    "COLOR_RED": {
+      "acc": 1.0,
+      "n": 84
+    },
+    "COLOR_YELLOW": {
+      "acc": 0.9778,
+      "n": 90
+    },
+    "CREATE_REMINDER_DRINK_WATER": {
+      "acc": 0.9773,
+      "n": 88
+    },
+    "CREATE_REMINDER_EXERCISE": {
+      "acc": 1.0,
+      "n": 90
+    },
+    "CREATE_REMINDER_STUDY": {
+      "acc": 0.9882,
+      "n": 85
+    },
+    "LIGHT_OFF": {
+      "acc": 0.9205,
+      "n": 88
+    },
+    "LIGHT_ON": {
+      "acc": 0.9655,
+      "n": 87
+    },
+    "LIST_REMINDERS": {
+      "acc": 1.0,
+      "n": 79
+    },
+    "MESSAGE": {
+      "acc": 0.9872,
+      "n": 78
+    },
+    "NEXT": {
+      "acc": 1.0,
+      "n": 89
+    },
+    "PAUSE": {
+      "acc": 0.9881,
+      "n": 84
+    },
+    "PLAY_MUSIC": {
+      "acc": 0.9186,
+      "n": 86
+    },
+    "STOP": {
+      "acc": 0.9412,
+      "n": 85
+    },
+    "TEMPERATURE_18": {
+      "acc": 1.0,
+      "n": 90
+    },
+    "TEMPERATURE_22": {
+      "acc": 1.0,
+      "n": 90
+    },
+    "TEMPERATURE_26": {
+      "acc": 1.0,
+      "n": 90
+    },
+    "TIME": {
+      "acc": 1.0,
+      "n": 81
+    },
+    "TIMER_10s": {
+      "acc": 0.9773,
+      "n": 88
+    },
+    "TIMER_1m": {
+      "acc": 0.931,
+      "n": 87
+    },
+    "TIMER_30s": {
+      "acc": 0.9775,
+      "n": 89
+    },
+    "VOLUME_DOWN": {
+      "acc": 0.931,
+      "n": 87
+    },
+    "VOLUME_UP": {
+      "acc": 0.9639,
+      "n": 83
+    },
+    "WEATHER": {
+      "acc": 0.9639,
+      "n": 83
+    },
+    "ALL": {
+      "acc": 0.9768,
+      "n": 2763
+    }
+  },
+  "wer_proxy_token_f1": 0.9778,
+  "wer_note": "ASR-free token-F1 between the gold command and the canonical phrase of the predicted intent (higher = closer to the true command). No speech recognition used (constraint #8). True WER is not measurable without ASR.",
+  "robustness": {
+    "by_condition": {
+      "clean": 0.9739,
+      "noise": 1.0,
+      "noisy": 0.9797
+    },
+    "by_duration_bucket": {
+      "<1.0s": 0.9619,
+      "1.0-1.5s": 0.9894,
+      ">=1.5s": 0.9752
+    },
+    "clean_to_noisy_delta": 0.0058,
+    "per_value_acc": {
+      "PLAY_MUSIC": 0.9186,
+      "LIGHT_OFF": 0.9205,
+      "TIMER_1m": 0.931,
+      "VOLUME_DOWN": 0.931,
+      "ALARM_4_00AM": 0.9398,
+      "STOP": 0.9412,
+      "CALL": 0.9487,
+      "VOLUME_UP": 0.9639,
+      "WEATHER": 0.9639,
+      "ALARM_9_00PM": 0.9643,
+      "LIGHT_ON": 0.9655,
+      "ALL": 0.9768,
+      "CREATE_REMINDER_DRINK_WATER": 0.9773,
+      "TIMER_10s": 0.9773,
+      "TIMER_30s": 0.9775,
+      "COLOR_YELLOW": 0.9778,
+      "MESSAGE": 0.9872,
+      "PAUSE": 0.9881,
+      "CREATE_REMINDER_STUDY": 0.9882,
+      "ALARM_8_00AM": 0.9889,
+      "BRIGHTNESS_100": 1.0,
+      "BRIGHTNESS_20": 1.0,
+      "BRIGHTNESS_60": 1.0,
+      "COLOR_BLUE": 1.0,
+      "COLOR_GREEN": 1.0,
+      "COLOR_RED": 1.0,
+      "CREATE_REMINDER_EXERCISE": 1.0,
+      "LIST_REMINDERS": 1.0,
+      "NEXT": 1.0,
+      "TEMPERATURE_18": 1.0,
+      "TEMPERATURE_22": 1.0,
+      "TEMPERATURE_26": 1.0,
+      "TIME": 1.0
+    }
+  }
+}

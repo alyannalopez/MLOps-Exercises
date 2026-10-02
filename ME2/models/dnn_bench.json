@@ -1,0 +1,8 @@
+{
+  "name": "dnn",
+  "params": 14603,
+  "test_acc": 0.5733,
+  "best_val": 0.5463,
+  "train_time_s": 49.3,
+  "epochs_run": 49
+}

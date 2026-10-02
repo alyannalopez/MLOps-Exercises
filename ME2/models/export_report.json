@@ -1,0 +1,11 @@
+{
+  "model": "cnn1d",
+  "kind": "logmel",
+  "opset": 17,
+  "float_mb": 0.985,
+  "parity_max_abs_diff": 1.1444091796875e-05,
+  "parity_argmax_agree": "32/32",
+  "int8_ok": false,
+  "int8_test_acc": null,
+  "note": "float32 ONNX (dynamic batch, legacy exporter) verified vs PyTorch: argmax 32/32. INT8 dynamic quantization blocked by an onnxruntime quantizer bug (ShapeInferenceError on Conv weights). INT8 size reported analytically: ~253 KB (weights dominate, 8-bit)."
+}

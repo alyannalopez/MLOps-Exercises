@@ -1,0 +1,8 @@
+{
+  "name": "cnn1d",
+  "params": 246443,
+  "test_acc": 0.9791,
+  "best_val": 0.9797,
+  "train_time_s": 236.5,
+  "epochs_run": 84
+}

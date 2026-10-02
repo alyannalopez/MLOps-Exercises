@@ -1,9 +1,0 @@
-{
-  "tag": "cnn1d_1790586252",
-  "model": "cnn1d",
-  "params": 246443,
-  "onnx_latency_ms": 0.13,
-  "onnx_kb": 962.1,
-  "onnx_int8_latency_ms": 0.28,
-  "onnx_int8_kb": 253.0
-}
