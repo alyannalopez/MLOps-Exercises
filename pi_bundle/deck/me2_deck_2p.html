@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ME2 — Voice Controlled Smart Device</title>
+<style>
+  :root{
+    --ink:#1c1c1c;
+    --muted:#6b6b6b;
+    --gold:#b8860b;
+    --gold-soft:#f3e6c4;
+    --blue:#1f4fd8;
+    --blue-soft:#e6ecfb;
+    --line:#e7e2d6;
+    --paper:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#ececec;font-family:"Helvetica Neue",Arial,sans-serif;color:var(--ink);}
+  .page{
+    width:1123px;height:794px;background:var(--paper);
+    margin:14px auto;padding:44px 52px;position:relative;overflow:hidden;
+    box-shadow:0 2px 14px rgba(0,0,0,.18);
+    page-break-after:always;break-after:page;
+  }
+  .page:last-child{page-break-after:auto;break-after:auto;}
+  @media print{
+    html,body{background:#fff;}
+    .page{margin:0;box-shadow:none;width:1123px;height:794px;page-break-after:always;break-after:page;}
+    .page:last-child{page-break-after:auto;break-after:auto;}
+  }
+  @page{size:1123px 794px;margin:0;}
+  /* ---------- header ---------- */
+  .head{border-bottom:2px solid var(--gold);padding-bottom:12px;margin-bottom:18px;}
+  .kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--blue);font-weight:700;}
+  h1{font-size:30px;font-weight:800;letter-spacing:-.01em;margin-top:3px;}
+  .sub{font-size:13px;color:var(--muted);margin-top:5px;}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:11px;}
+  .chip{font-size:11px;font-weight:600;color:var(--ink);background:var(--gold-soft);
+        border:1px solid #e4d3a1;border-radius:20px;padding:3px 11px;}
+  .chip.b{background:var(--blue-soft);border-color:#c3d2f5;}
+  /* ---------- grid of spec tables ---------- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .card{border:1px solid var(--line);border-radius:8px;padding:13px 15px;background:#fff;}
+  .card h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);
+           font-weight:800;margin-bottom:9px;display:flex;align-items:center;gap:7px;}
+  .card h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);}
+  table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  td{padding:4px 6px;vertical-align:top;border-bottom:1px solid #f1ede2;}
+  tr:last-child td{border-bottom:none;}
+  td.k{color:var(--muted);width:46%;}
+  td.v{font-weight:600;text-align:right;color:var(--ink);}
+  td.v .hl{color:var(--blue);}
+  .foot-note{font-size:10px;color:var(--muted);margin-top:7px;line-height:1.4;}
+  /* ---------- pipeline strip ---------- */
+  .pipe{margin-top:16px;border:1px solid var(--line);border-radius:8px;padding:12px 15px;background:#fff;}
+  .pipe h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:10px;}
+  .flow{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;}
+  .node{flex:1;border:1px solid #d9d0b8;border-radius:7px;background:linear-gradient(#fff,#fdfaf2);
+        padding:8px 6px;text-align:center;}
+  .node b{display:block;font-size:11.5px;color:var(--ink);}
+  .node span{display:block;font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.25;}
+  .node.act{background:linear-gradient(#fff,#eef3fe);border-color:#c3d2f5;}
+  .node.act b{color:var(--blue);}
+  .arrow{color:var(--gold);font-size:15px;font-weight:800;flex:0 0 auto;}
+  .pagemark{position:absolute;bottom:16px;left:52px;right:52px;display:flex;justify-content:space-between;
+            font-size:10px;color:var(--muted);border-top:1px solid var(--line);padding-top:7px;}
+  .pagemark .brand{color:var(--gold);font-weight:700;letter-spacing:.08em;}
+  /* ---------- page 2 ---------- */
+  .review{border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .review .bar{background:var(--gold);color:#fff;font-size:12px;font-weight:800;letter-spacing:.12em;
+               text-transform:uppercase;padding:9px 15px;}
+  .review table td{font-size:12px;}
+  .review td.n{width:26px;text-align:center;color:var(--muted);font-weight:700;}
+  .review td.item{width:auto;}
+  .review td.st{width:150px;text-align:right;}
+  .ok{color:var(--blue);font-weight:700;}
+  .partial{color:var(--gold);font-weight:700;}
+  .refs{margin-top:16px;}
+  .refs .card{background:#fff;}
+  .refs td.v{text-align:left;font-weight:600;}
+  .refs td.v a{color:var(--blue);text-decoration:none;}
+</style>
+</head>
+<body>
+
+<!-- ============================ PAGE 1 ============================ -->
+<div class="page">
+  <div class="head">
+    <div class="kicker">AI231 — Machine Learning Engineering</div>
+    <h1>ME2 — Voice Controlled Smart Device</h1>
+    <div class="sub">Always-on keyword + intent recognition at the edge · no cloud round-trip</div>
+    <div class="meta">
+      <span class="chip">Alyanna Lopez</span>
+      <span class="chip b">October 2026</span>
+      <span class="chip">CRNN · 718,932 params</span>
+      <span class="chip b">20,611 clips</span>
+      <span class="chip">Trained on A100</span>
+      <span class="chip b">Validated on RPi 4</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- MODEL -->
+    <div class="card">
+      <h2><span class="dot"></span>Model</h2>
+      <table>
+        <tr><td class="k">Architecture</td><td class="v">CRNN (Conv ×2 → Bi-LSTM ×2)</td></tr>
+        <tr><td class="k">Parameters</td><td class="v">718,932</td></tr>
+        <tr><td class="k">Weights</td><td class="v"><span class="hl">2.743 MB</span> fp32 · 702 KB int8</td></tr>
+        <tr><td class="k">Input feature</td><td class="v">MFCC(40) · 100 frames</td></tr>
+        <tr><td class="k">Output classes</td><td class="v">20 (19 intents + REJECT)</td></tr>
+        <tr><td class="k">Slotted intents</td><td class="v">6 (timer, alarm, temp, bright, color, reminder)</td></tr>
+      </table>
+    </div>
+
+    <!-- DATASET -->
+    <div class="card">
+      <h2><span class="dot"></span>Dataset</h2>
+      <table>
+        <tr><td class="k">Source</td><td class="v">HF · airimonda/ai231-me2-voice-commands</td></tr>
+        <tr><td class="k">Clips / hours</td><td class="v">20,611 clips · 16 kHz mono</td></tr>
+        <tr><td class="k">Speakers</td><td class="v">260 train / 115 test / 5 holdout</td></tr>
+        <tr><td class="k">Voice mix</td><td class="v">≈85% synthetic + ≈15% real (train)</td></tr>
+        <tr><td class="k">Labels</td><td class="v">19 intents · 93 phrases · 6 slotted</td></tr>
+        <tr><td class="k">Split (speaker-disjoint)</td><td class="v">15,716 / 4,693 / 202</td></tr>
+      </table>
+    </div>
+
+    <!-- TRAINING ON A100 -->
+    <div class="card">
+      <h2><span class="dot"></span>Training on the A100</h2>
+      <table>
+        <tr><td class="k">Cluster</td><td class="v">1× A100-SXM4-40GB (40 GB HBM2e)</td></tr>
+        <tr><td class="k">Objective</td><td class="v">Cross-entropy · 20-way classification</td></tr>
+        <tr><td class="k">Optimizer</td><td class="v">Adam (lr 1e-3, cosine) · seed 42</td></tr>
+        <tr><td class="k">Batch / patience</td><td class="v">256 · patience 10 (max 100 ep)</td></tr>
+        <tr><td class="k">Convergence</td><td class="v">best ep 29 · early stop ep 39</td></tr>
+        <tr><td class="k">Wall-clock</td><td class="v">≈25 s · peak VRAM &lt; 1 GB</td></tr>
+      </table>
+    </div>
+
+    <!-- VALIDATION ON RPI 4 -->
+    <div class="card">
+      <h2><span class="dot"></span>Validation on the Raspberry Pi 4</h2>
+      <table>
+        <tr><td class="k">Intent accuracy</td><td class="v"><span class="hl">79.12%</span> (3713/4693)</td></tr>
+        <tr><td class="k">Task completion</td><td class="v">79.12% · Cohen's κ 0.7765</td></tr>
+        <tr><td class="k">Macro F1</td><td class="v">0.7672</td></tr>
+        <tr><td class="k">Out-of-scope recall</td><td class="v">74.23% · false-reject 7.17%</td></tr>
+        <tr><td class="k">Inference latency</td><td class="v">p50 1.995 ms · p95 2.731 ms</td></tr>
+        <tr><td class="k">Wake word (openWakeWord)</td><td class="v">p50 2.23 ms / 80 ms chunk</td></tr>
+        <tr><td class="k">Runtime</td><td class="v">onnxruntime · int8 · CPU</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="pipe">
+    <h2>Pipeline — mic to actuator</h2>
+    <div class="flow">
+      <div class="node"><b>Mic</b><span>16 kHz mono</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Wake word</b><span>openWakeWord<br>"hey jarvis"</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Features</b><span>MFCC(40)<br>100 frames</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Encoder</b><span>Conv ×2 →<br>Bi-LSTM ×2</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Intent head</b><span>Linear → 20<br>+ slot values</span></div>
+      <div class="arrow">→</div>
+      <div class="node act"><b>Actuator</b><span>Raspberry Pi 4<br>(4 GB)</span></div>
+    </div>
+  </div>
+
+  <div class="pagemark">
+    <span class="brand">ME2 · VCM</span>
+    <span>p. 1 / 2</span>
+  </div>
+</div>
+
+<!-- ============================ PAGE 2 ============================ -->
+<div class="page">
+  <div class="head">
+    <div class="kicker">Submission readiness</div>
+    <h1>What the reviewer will look for</h1>
+    <div class="sub">Status of each deliverable for this submission</div>
+    <div class="meta">
+      <span class="chip">Alyanna Lopez</span>
+      <span class="chip b">October 2026</span>
+      <span class="chip">CRNN · 20,611 clips · A100 → RPi 4</span>
+    </div>
+  </div>
+
+  <div class="review">
+    <div class="bar">Reviewer checklist</div>
+    <table>
+      <tr>
+        <td class="n">1</td>
+        <td class="item">Repo public, one-command reproduction</td>
+        <td class="st ok">done · launch_web.sh</td>
+      </tr>
+      <tr>
+        <td class="n">2</td>
+        <td class="item">Dataset licensed and citable (DOI)</td>
+        <td class="st ok">done · HF dataset card</td>
+      </tr>
+      <tr>
+        <td class="n">3</td>
+        <td class="item">Training logs + final checkpoint committed</td>
+        <td class="st ok">done · crnn_a100_best.pt</td>
+      </tr>
+      <tr>
+        <td class="n">4</td>
+        <td class="item">Pi 4 latency reproduced by the posted script</td>
+        <td class="st partial">pending on-Pi re-run · reported p50 1.995 ms</td>
+      </tr>
+      <tr>
+        <td class="n">5</td>
+        <td class="item">Held-out test set, unseen speakers</td>
+        <td class="st ok">done · 115 test speakers</td>
+      </tr>
+      <tr>
+        <td class="n">6</td>
+        <td class="item">Baseline of comparable size compared</td>
+        <td class="st ok">done · 5-model benchmark</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="refs">
+    <div class="card">
+      <h2><span class="dot"></span>References &amp; artefacts</h2>
+      <table>
+        <tr><td class="k">GitHub repository</td><td class="v"><a href="https://github.com/alyannalopez/MLOps-Exercises">github.com/alyannalopez/MLOps-Exercises</a></td></tr>
+        <tr><td class="k">Dataset location</td><td class="v">HF · airimonda/ai231-me2-voice-commands (access terms on card)</td></tr>
+        <tr><td class="k">A100 cluster</td><td class="v">1× A100-SXM4-40GB · CUDA 12.4 · torch 2.6.0 · seed 42</td></tr>
+        <tr><td class="k">Model weights</td><td class="v">crnn_a100_best.pt · crnn_float.onnx · crnn_int8.onnx</td></tr>
+        <tr><td class="k">Wake word</td><td class="v">openWakeWord "hey jarvis" · MIT · dscripka/openWakeWord</td></tr>
+      </table>
+      <div class="foot-note">
+        Best result: A100 retrain (no weight decay), test accuracy 0.7912 on 4,693 held-out clips
+        (3,713 correct). Local-MPS reference run 0.7765; A100 + weight-decay 0.7699.
+        All figures taken from report/report.md, models/*_result.json and report/wakeword_info.json.
+      </div>
+    </div>
+  </div>
+
+  <div class="pagemark">
+    <span class="brand">ME2 · VCM</span>
+    <span>p. 2 / 2</span>
+  </div>
+</div>
+
+</body>
+</html>
