@@ -38,6 +38,11 @@ local_search/
 # --- Big bundled archives ---
 pi_bundle.zip
 
+# --- Web demo bundle (pi_bundle/): exclude local venv + caches, keep code + models ---
+pi_bundle/.venv/
+pi_bundle/**/__pycache__/
+pi_bundle/**/*.py[cod]
+
 # --- Large pre-trained model binaries (re-downloadable, >50 MB) ---
 asr/*.bin
 asr/ggml-*.bin
