@@ -1,22 +1,22 @@
 {
   "arch": "conformer_s",
-  "checkpoint": "/Users/yannamii/sandbox/ME2/models/conformer_s_seed0/best.pt",
+  "checkpoint": "/mnt/jfs_hpc/home/alyanna.may.lopez/sandbox/ME2/models/conformer_s_seed0/best.pt",
   "n_params": 246055,
   "export_method": "torch.onnx.export dynamo exporter (opset 14, dynamic batch), onnxscript 0.7.2",
   "reference": "ORIGINAL PyTorch model (no module swaps)",
   "float_onnx": {
-    "path": "/Users/yannamii/sandbox/ME2/models/conformer_s_float.onnx",
-    "size_bytes": 1077705,
-    "random_max_abs_diff": 4.291534423828125e-06,
+    "path": "/mnt/jfs_hpc/home/alyanna.may.lopez/sandbox/ME2/models/conformer_s_float.onnx",
+    "size_bytes": 1082132,
+    "random_max_abs_diff": 2.384185791015625e-06,
     "n_clips": 128,
     "argmax_agreement": 1.0,
-    "max_abs_diff": 5.7220458984375e-06
+    "max_abs_diff": 4.76837158203125e-06
   },
   "int8_onnx": {
-    "path": "/Users/yannamii/sandbox/ME2/models/conformer_s_int8.onnx",
-    "size_bytes": 333639,
-    "argmax_agreement": 0.984375,
-    "max_abs_diff": 0.48371097445487976
+    "path": "/mnt/jfs_hpc/home/alyanna.may.lopez/sandbox/ME2/models/conformer_s_int8.onnx",
+    "size_bytes": 337340,
+    "argmax_agreement": 0.9921875,
+    "max_abs_diff": 1.5395631790161133
   },
-  "export_seconds": 3.8
+  "export_seconds": 32.1
 }

@@ -3,14 +3,14 @@
   "seed": 0,
   "n_params": 246055,
   "two_head": true,
-  "best_epoch": 69,
-  "best_val_balanced_acc": 0.8352995253129547,
-  "final_val_acc": 0.8516940123588324,
-  "final_val_balanced_acc": 0.8352995253129547,
-  "final_val_oos_acc": 0.6901840490797546,
-  "train_seconds": 2358.7,
-  "epochs_run": 84,
-  "device": "mps",
+  "best_epoch": 80,
+  "best_val_balanced_acc": 0.840529962217922,
+  "final_val_acc": 0.8555295120392074,
+  "final_val_balanced_acc": 0.840529962217922,
+  "final_val_oos_acc": 0.6748466257668712,
+  "train_seconds": 429.7,
+  "epochs_run": 95,
+  "device": "cuda",
   "n_train": 11733,
   "n_val": 4693,
   "config": {
@@ -26,9 +26,9 @@
     "slot_weight": 1.0,
     "slots": true,
     "seed": 0,
-    "workers": 0,
-    "device": null
+    "workers": 8,
+    "device": "cuda"
   },
-  "final_val_slot_acc": 0.8161090986575751,
-  "final_val_slotted_slot_acc": 0.6875492513790387
+  "final_val_slot_acc": 0.818239931813339,
+  "final_val_slotted_slot_acc": 0.6977935382190701
 }
