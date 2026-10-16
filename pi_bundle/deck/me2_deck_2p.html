@@ -92,10 +92,10 @@
     <div class="meta">
       <span class="chip">Alyanna Lopez</span>
       <span class="chip b">October 2026</span>
-      <span class="chip">CRNN · 718,932 params</span>
-      <span class="chip b">20,611 clips</span>
-      <span class="chip">Trained on A100</span>
-      <span class="chip b">Validated on RPi 4</span>
+      <span class="chip">two-head Conformer-S · 246,055 params</span>
+      <span class="chip b">16,628 clips</span>
+      <span class="chip">Trained on Apple-Silicon MPS</span>
+      <span class="chip b">Validated on RPi 4/5</span>
     </div>
   </div>
 
@@ -104,11 +104,11 @@
     <div class="card">
       <h2><span class="dot"></span>Model</h2>
       <table>
-        <tr><td class="k">Architecture</td><td class="v">CRNN (Conv ×2 → Bi-LSTM ×2)</td></tr>
-        <tr><td class="k">Parameters</td><td class="v">718,932</td></tr>
-        <tr><td class="k">Weights</td><td class="v"><span class="hl">2.743 MB</span> fp32 · 702 KB int8</td></tr>
-        <tr><td class="k">Input feature</td><td class="v">MFCC(40) · 100 frames</td></tr>
-        <tr><td class="k">Output classes</td><td class="v">20 (19 intents + REJECT)</td></tr>
+        <tr><td class="k">Architecture</td><td class="v">two-head Conformer-S (1 layer · 64-d · 4 heads)</td></tr>
+        <tr><td class="k">Parameters</td><td class="v">246,055</td></tr>
+        <tr><td class="k">Weights</td><td class="v"><span class="hl">1.03 MB</span> float ONNX · 0.32 MB int8</td></tr>
+        <tr><td class="k">Input feature</td><td class="v">log-mel(40) · 100 frames · 1 s</td></tr>
+        <tr><td class="k">Outputs (dual)</td><td class="v">intent_logits [B,20] + slot_logits [B,19]</td></tr>
         <tr><td class="k">Slotted intents</td><td class="v">6 (timer, alarm, temp, bright, color, reminder)</td></tr>
       </table>
     </div>
@@ -118,38 +118,38 @@
       <h2><span class="dot"></span>Dataset</h2>
       <table>
         <tr><td class="k">Source</td><td class="v">HF · airimonda/ai231-me2-voice-commands</td></tr>
-        <tr><td class="k">Clips / hours</td><td class="v">20,611 clips · 16 kHz mono</td></tr>
-        <tr><td class="k">Speakers</td><td class="v">260 train / 115 test / 5 holdout</td></tr>
-        <tr><td class="k">Voice mix</td><td class="v">≈85% synthetic + ≈15% real (train)</td></tr>
-        <tr><td class="k">Labels</td><td class="v">19 intents · 93 phrases · 6 slotted</td></tr>
-        <tr><td class="k">Split (speaker-disjoint)</td><td class="v">15,716 / 4,693 / 202</td></tr>
+        <tr><td class="k">Clips / hours</td><td class="v">16,628 clips · 9.6 h · 16 kHz mono</td></tr>
+        <tr><td class="k">Speakers</td><td class="v">307 train / 115 test / 5 holdout (disjoint)</td></tr>
+        <tr><td class="k">Voice mix</td><td class="v">synthetic + real (train)</td></tr>
+        <tr><td class="k">Labels</td><td class="v">20 intents · 18 slot values · 6 slotted</td></tr>
+        <tr><td class="k">Split (speaker-disjoint)</td><td class="v">10,733 / 4,443 / 1,250 neg / 202</td></tr>
       </table>
     </div>
 
-    <!-- TRAINING ON A100 -->
+    <!-- TRAINING ON APPLE-SILICON MPS -->
     <div class="card">
-      <h2><span class="dot"></span>Training on the A100</h2>
+      <h2><span class="dot"></span>Training on Apple-Silicon MPS</h2>
       <table>
-        <tr><td class="k">Cluster</td><td class="v">1× A100-SXM4-40GB (40 GB HBM2e)</td></tr>
-        <tr><td class="k">Objective</td><td class="v">Cross-entropy · 20-way classification</td></tr>
-        <tr><td class="k">Optimizer</td><td class="v">Adam (lr 1e-3, cosine) · seed 42</td></tr>
-        <tr><td class="k">Batch / patience</td><td class="v">256 · patience 10 (max 100 ep)</td></tr>
-        <tr><td class="k">Convergence</td><td class="v">best ep 29 · early stop ep 39</td></tr>
-        <tr><td class="k">Wall-clock</td><td class="v">≈25 s · peak VRAM &lt; 1 GB</td></tr>
+        <tr><td class="k">Cluster</td><td class="v">local M-series (MPS) · no A100 available</td></tr>
+        <tr><td class="k">Objective</td><td class="v">joint CE: intent (20-way) + slot (19-way)</td></tr>
+        <tr><td class="k">Optimizer</td><td class="v">AdamW (lr 3e-4, wd 1e-4, LS 0.1) · seed 0</td></tr>
+        <tr><td class="k">Epochs</td><td class="v">84 (early-stop) · train loss 2.15</td></tr>
+        <tr><td class="k">Wall-clock</td><td class="v">≈39.3 min · 1 node</td></tr>
+        <tr><td class="k">Encoder</td><td class="v">1 Conformer layer · 64-d · 4 heads</td></tr>
       </table>
     </div>
 
-    <!-- VALIDATION ON RPI 4 -->
+    <!-- VALIDATION -->
     <div class="card">
-      <h2><span class="dot"></span>Validation on the Raspberry Pi 4</h2>
+      <h2><span class="dot"></span>Validation (held-out, unseen speakers)</h2>
       <table>
-        <tr><td class="k">Intent accuracy</td><td class="v"><span class="hl">79.12%</span> (3713/4693)</td></tr>
-        <tr><td class="k">Task completion</td><td class="v">79.12% · Cohen's κ 0.7765</td></tr>
-        <tr><td class="k">Macro F1</td><td class="v">0.7672</td></tr>
-        <tr><td class="k">Out-of-scope recall</td><td class="v">74.23% · false-reject 7.17%</td></tr>
-        <tr><td class="k">Inference latency</td><td class="v">p50 1.995 ms · p95 2.731 ms</td></tr>
-        <tr><td class="k">Wake word (openWakeWord)</td><td class="v">p50 2.23 ms / 80 ms chunk</td></tr>
-        <tr><td class="k">Runtime</td><td class="v">onnxruntime · int8 · CPU</td></tr>
+        <tr><td class="k">Intent accuracy</td><td class="v"><span class="hl">85.2%</span> [84.2, 86.2] · bal. 83.5%</td></tr>
+        <tr><td class="k">Slot exact match</td><td class="v">69.3% end-to-end · 77.3% given intent</td></tr>
+        <tr><td class="k">In-scope precision @τ0.7</td><td class="v">97.1% precision · 92.2% recall</td></tr>
+        <tr><td class="k">Inference latency</td><td class="v">p50 0.74 ms · p95 0.88 ms (M-series CPU)</td></tr>
+        <tr><td class="k">Wake word (openWakeWord)</td><td class="v">"hey mycroft" · peak 0.9996 · 0/250 FA @0.75</td></tr>
+        <tr><td class="k">INT8 parity</td><td class="v">98.4% argmax match · 0.32 MB (−69%)</td></tr>
+        <tr><td class="k">Runtime</td><td class="v">onnxruntime · int8 · CPU · fully offline</td></tr>
       </table>
     </div>
   </div>
@@ -160,15 +160,15 @@
     <div class="flow">
       <div class="node"><b>Mic</b><span>16 kHz mono</span></div>
       <div class="arrow">→</div>
-      <div class="node"><b>Wake word</b><span>openWakeWord<br>"hey jarvis"</span></div>
+      <div class="node"><b>Wake word</b><span>openWakeWord<br>"hey mycroft"</span></div>
       <div class="arrow">→</div>
-      <div class="node"><b>Features</b><span>MFCC(40)<br>100 frames</span></div>
+      <div class="node"><b>Features</b><span>log-mel(40)<br>100 frames</span></div>
       <div class="arrow">→</div>
-      <div class="node"><b>Encoder</b><span>Conv ×2 →<br>Bi-LSTM ×2</span></div>
+      <div class="node"><b>Encoder</b><span>Conformer-S<br>1 layer · 64-d</span></div>
       <div class="arrow">→</div>
-      <div class="node"><b>Intent head</b><span>Linear → 20<br>+ slot values</span></div>
+      <div class="node"><b>Dual heads</b><span>intent → 20<br>slot → 19 (joint)</span></div>
       <div class="arrow">→</div>
-      <div class="node act"><b>Actuator</b><span>Raspberry Pi 4<br>(4 GB)</span></div>
+      <div class="node act"><b>Actuator</b><span>Raspberry Pi 4/5<br>(no ASR)</span></div>
     </div>
   </div>
 
@@ -187,7 +187,7 @@
     <div class="meta">
       <span class="chip">Alyanna Lopez</span>
       <span class="chip b">October 2026</span>
-      <span class="chip">CRNN · 20,611 clips · A100 → RPi 4</span>
+      <span class="chip">Conformer-S · 16,628 clips · MPS → RPi 4/5</span>
     </div>
   </div>
 
@@ -197,32 +197,32 @@
       <tr>
         <td class="n">1</td>
         <td class="item">Repo public, one-command reproduction</td>
-        <td class="st ok">done · launch_web.sh</td>
+        <td class="st ok">done · launch_web.sh + setup_pi.sh</td>
       </tr>
       <tr>
         <td class="n">2</td>
         <td class="item">Dataset licensed and citable (DOI)</td>
-        <td class="st ok">done · HF dataset card</td>
+        <td class="st ok">done · HF DOI 10.57967/hf/10723</td>
       </tr>
       <tr>
         <td class="n">3</td>
         <td class="item">Training logs + final checkpoint committed</td>
-        <td class="st ok">done · crnn_a100_best.pt</td>
+        <td class="st ok">done · best.pt + train_log.json (5 archs)</td>
       </tr>
       <tr>
         <td class="n">4</td>
-        <td class="item">Pi 4 latency reproduced by the posted script</td>
-        <td class="st partial">pending on-Pi re-run · reported p50 1.995 ms</td>
+        <td class="item">Pi 4/5 latency reproduced by the posted script</td>
+        <td class="st partial">pending on-Pi re-run · p50 0.74 ms (M-series)</td>
       </tr>
       <tr>
         <td class="n">5</td>
         <td class="item">Held-out test set, unseen speakers</td>
-        <td class="st ok">done · 115 test speakers</td>
+        <td class="st ok">done · 115 test + 5 holdout, disjoint</td>
       </tr>
       <tr>
         <td class="n">6</td>
         <td class="item">Baseline of comparable size compared</td>
-        <td class="st ok">done · 5-model benchmark</td>
+        <td class="st ok">done · CNN/MLP/TCN/CRNN vs Conformer-S</td>
       </tr>
     </table>
   </div>
@@ -232,15 +232,15 @@
       <h2><span class="dot"></span>References &amp; artefacts</h2>
       <table>
         <tr><td class="k">GitHub repository</td><td class="v"><a href="https://github.com/alyannalopez/MLOps-Exercises">github.com/alyannalopez/MLOps-Exercises</a></td></tr>
-        <tr><td class="k">Dataset location</td><td class="v">HF · airimonda/ai231-me2-voice-commands (access terms on card)</td></tr>
-        <tr><td class="k">A100 cluster</td><td class="v">1× A100-SXM4-40GB · CUDA 12.4 · torch 2.6.0 · seed 42</td></tr>
-        <tr><td class="k">Model weights</td><td class="v">crnn_a100_best.pt · crnn_float.onnx · crnn_int8.onnx</td></tr>
-        <tr><td class="k">Wake word</td><td class="v">openWakeWord "hey jarvis" · MIT · dscripka/openWakeWord</td></tr>
+        <tr><td class="k">Dataset location</td><td class="v">HF · airimonda/ai231-me2-voice-commands · DOI 10.57967/hf/10723</td></tr>
+        <tr><td class="k">Compute</td><td class="v">local Apple-Silicon MPS (no A100) · 1 node · 84 epochs · seed 0</td></tr>
+        <tr><td class="k">Model weights</td><td class="v">conformer_s_float.onnx (1.03 MB) · conformer_s_int8.onnx (0.32 MB)</td></tr>
+        <tr><td class="k">Wake word</td><td class="v">openWakeWord "hey mycroft" · MIT · dscripka/openWakeWord</td></tr>
       </table>
       <div class="foot-note">
-        Best result: A100 retrain (no weight decay), test accuracy 0.7912 on 4,693 held-out clips
-        (3,713 correct). Local-MPS reference run 0.7765; A100 + weight-decay 0.7699.
-        All figures taken from report/report.md, models/*_result.json and report/wakeword_info.json.
+        Winner of the 5-architecture benchmark: two-head Conformer-S (246k params), test accuracy
+        85.2% [84.2, 86.2] on 4,443 held-out clips from 115 unseen speakers; slot exact-match 69.3%.
+        All figures taken from report/stage5_evaluation.md and report/stage6_deployment.md.
       </div>
     </div>
   </div>

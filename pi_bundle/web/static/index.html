@@ -213,7 +213,7 @@
       <div class="crest">🏛️</div>
       <div>
         <h1>VCM · <b>Smart Home</b></h1>
-        <p>Voice Command Model — CRNN · openWakeWord pipeline</p>
+        <p>Voice Command Model — two-head Conformer-S (intent + slot) · openWakeWord</p>
       </div>
     </div>
     <div class="top-right">
@@ -232,7 +232,7 @@
         </div>
       </div>
       <div class="bar"><i id="level"></i></div>
-      <p class="hint" id="hint">Say <b>&ldquo;hey jarvis&rdquo;</b> &mdash; I&rsquo;m listening.</p>
+      <p class="hint" id="hint">Say <b>&ldquo;hey mycroft&rdquo;</b> &mdash; I&rsquo;m listening.</p>
     </div>
   </div>
 
@@ -265,7 +265,7 @@
     </div>
   </div>
 
-  <footer>Built on the <b>ME2 CRNN</b> (718k params · 20 intents) · A100-retrained · ONNX runtime</footer>
+  <footer>Built on the <b>ME2 two-head Conformer-S</b> (246k params · 20 intents + 18 slots) · no ASR · ONNX runtime</footer>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -283,6 +283,7 @@ const ICON = {
   VOLUME_UP:'🔊', VOLUME_DOWN:'🔉',
   TEMPERATURE:'🌡️', TIMER:'⏱️', WEATHER:'🌤️',
   ALARM:'⏰', CREATE_REMINDER:'📝', LIST_REMINDERS:'📋',
+  TIME:'🕐', CALL:'📞', MESSAGE:'✉️', OUT_OF_SCOPE:'❓',
 };
 const TILE = {
   LIGHT_ON:'light', LIGHT_OFF:'light', BRIGHTNESS:'light', COLOR:'light',
@@ -290,6 +291,7 @@ const TILE = {
   VOLUME_UP:'music', VOLUME_DOWN:'music',
   TEMPERATURE:'temp', TIMER:'timer', WEATHER:'weather',
   ALARM:'lists', CREATE_REMINDER:'lists', LIST_REMINDERS:'lists',
+  TIME:'clock', CALL:'comm', MESSAGE:'comm',
 };
 
 /* ── websocket ── */
@@ -376,7 +378,7 @@ function setPhase(p){
   orb.classList.toggle('listening', p==='idle');
   if(p==='idle'){
     $('hint').innerHTML = wakeEnabled
-      ? 'Say <b>&ldquo;hey jarvis&rdquo;</b> &mdash; I&rsquo;m listening.'
+      ? 'Say <b>&ldquo;hey mycroft&rdquo;</b> &mdash; I&rsquo;m listening.'
       : 'Tap the <b>orb</b> to record a command.';
   } else if(p==='armed'){
     $('hint').innerHTML='<b>Go ahead</b> &mdash; say your command now&hellip;';
@@ -398,11 +400,11 @@ function onResult(m){
   lastIntent=m.intent;
   $('hero').style.display='flex';
   $('heroIc').textContent = ICON[m.intent] || '💬';
-  $('intentName').textContent = m.name;
+  $('intentName').textContent = m.slot ? `${m.name} · ${m.slot}` : m.name;
   $('statusMsg').textContent = m.status;
   $('conf').textContent = (m.confidence*100).toFixed(1)+'%';
   $('top3').innerHTML = m.top.map(t=>`<span class="chip">${t.label} <b>${(t.prob*100).toFixed(0)}%</b></span>`).join('');
-  $('lat').textContent = `inference ${m.latency_ms} ms · CRNN · ONNX CPU`;
+  $('lat').textContent = `inference ${m.latency_ms} ms · Conformer-S · ONNX CPU`;
   addLog(m.name, m.status);
   renderTiles(m.state, m.intent);
   openPanel();
