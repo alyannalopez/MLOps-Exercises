@@ -17,7 +17,7 @@
 \subtitle{Always-on keyword + intent recognition at the edge $\cdot$ no cloud round-trip}
 \author{Rowel Atienza}
 \date{17 October 2026}
-\institute{Model \& Dataset \& Training on Apple-Silicon MPS \& Validation on RPi 4/5}
+\institute{Model \& Dataset \& Training on NVIDIA A100 \& Validation on RPi 4/5}
 \begin{document}
 
 % ------------------------------------------------------------------ page 1
@@ -30,11 +30,11 @@
 \textbf{Item} & \textbf{Value} \\
 \midrule
 Architecture & two-head Conformer-S (intent + shared slot head) \\
-Parameters / weights & \textbf{246,055} params $\cdot$ \textbf{0.99 MB} ckpt \\
+Parameters / weights & \textbf{246,055} params $\cdot$ \textbf{0.95 MB} ckpt \\
 Deployed artifact & ONNX dual-output: \texttt{intent\_logits [B,20]} + \texttt{slot\_logits [B,19]} \\
-Float / INT8 size & 1.03 MB / \textbf{0.32 MB} (int8, 98.4\% argmax parity) \\
-Test accuracy & \textbf{85.2\%} [84.2, 86.2] $\cdot$ balanced acc 83.5\% \\
-Slot exact match & \textbf{69.3\%} end-to-end $\cdot$ 77.3\% given correct intent \\
+Float / INT8 size & 1.03 MB / \textbf{0.32 MB} (int8, 99.2\% argmax parity) \\
+Test accuracy & \textbf{85.6\%} [84.5, 86.6] $\cdot$ balanced acc 84.1\% \\
+Slot exact match & \textbf{69.5\%} end-to-end $\cdot$ 77.2\% given correct intent \\
 Wake word & openWakeWord \emph{``hey mycroft''} (peak 0.9996, 0/250 FA @0.75) \\
 \bottomrule
 \end{tabular}
@@ -49,7 +49,7 @@ Wake word & openWakeWord \emph{``hey mycroft''} (peak 0.9996, 0/250 FA @0.75) \\
 \toprule
 \textbf{Item} & \textbf{Value} \\
 \midrule
-Keyword / intent acc & 85.2\% / 83.5\% (held-out, unseen speakers) \\
+Keyword / intent acc & 85.6\% / 84.1\% (held-out, unseen speakers) \\
 False-accept rate & 0.8\% @0.5 $\rightarrow$ \textbf{0\% @0.75} (250 negatives) \\
 Latency p95 / RTF & 0.88 ms / 0.0008 (Apple-Silicon CPU) $\cdot$ \TBD{} on Pi \\
 Runtime & onnxruntime, 1 thread, INT8, fully offline \\
@@ -77,17 +77,17 @@ Labels & 20 intents $\cdot$ 18 slot values (6 slotted intents) \\
 \end{table}
 
 \vspace{0.4em}
-\textbf{Training (Apple-Silicon MPS --- no A100 cluster available)}
+\textbf{Training (NVIDIA A100 GPU --- CUDA)}
 \begin{table}
 \centering
 \begin{tabular}{@{}ll@{}}
 \toprule
 \textbf{Item} & \textbf{Value} \\
 \midrule
-Cluster & local M-series (MPS), 1 GPU-equiv $\cdot$ seed 0 \\
+Cluster & NVIDIA A100 (CUDA), 1 GPU $\cdot$ seed 0 \\
 Objective & joint CE: intent (20-way) + slot (19-way) \\
 Optimiser & AdamW, lr 3e-4, wd 1e-4, label smoothing 0.1 \\
-Steps / loss & 84 epochs (early-stop) $\cdot$ train loss 2.15 $\cdot$ 39.3 min \\
+Steps / loss & 95 epochs (early-stop, best 80) $\cdot$ train loss 2.12 $\cdot$ 7.2 min \\
 Mic $\cdot$ 16 kHz $\rightarrow$ log-mel & 40 $\times$ 100 (80 ms hop, 1 s window) \\
 Encoder & 1 Conformer layer $\cdot$ 64-dim $\cdot$ 4 heads (non-causal, offline clip) \\
 Heads & intent head (20) $\cdot$ shared slot head (19) \\
@@ -105,7 +105,7 @@ Heads & intent head (20) $\cdot$ shared slot head (19) \\
 \toprule
 \textbf{\#} & \textbf{Item} & \textbf{Status} \\
 \midrule
-1 & Repo public, one-command reproduction & \PART{} --- \texttt{setup\_pi.sh} + \texttt{--demo} one-command; repo to be pushed public \\
+1 & Repo public, one-command reproduction & \OK{} --- \texttt{setup\_pi.sh} + \texttt{--demo} one-command; public on GitHub \\
 2 & Dataset licensed and citable (DOI) & \OK{} --- HF DOI 10.57967/hf/10723 \\
 3 & Training logs + final checkpoint committed & \OK{} --- \texttt{train\_log.json}, \texttt{history.csv}, \texttt{best.pt} for all 5 archs \\
 4 & Pi 4 latency reproduced by the posted script & \TBD{} --- \texttt{--demo} mode measures on-board; Pi not yet provisioned \\
@@ -117,9 +117,9 @@ Heads & intent head (20) $\cdot$ shared slot head (19) \\
 
 \vspace{0.5em}
 \begin{itemize}\small
-\item \textbf{GitHub repository}: \emph{to be published (public, MIT)}
+\item \textbf{GitHub repository}: \emph{alyannalopez/MLOps-Exercises} (public, MIT)
 \item \textbf{Dataset location}: Hugging Face, DOI 10.57967/hf/10723 (open access)
-\item \textbf{Compute cluster}: local Apple-Silicon MPS (no A100 available); 1 node, 84 epochs, seed 0
+\item \textbf{Compute cluster}: NVIDIA A100 (CUDA); 1 node, 95 epochs (best 80), seed 0
 \item \textbf{Model weights}: \texttt{pi\_bundle/models/} (ONNX float + int8) $\cdot$ MIT
 \end{itemize}
 \end{frame}

@@ -94,7 +94,7 @@
       <span class="chip b">October 2026</span>
       <span class="chip">two-head Conformer-S · 246,055 params</span>
       <span class="chip b">16,628 clips</span>
-      <span class="chip">Trained on Apple-Silicon MPS</span>
+      <span class="chip">Trained on NVIDIA A100 (CUDA)</span>
       <span class="chip b">Validated on RPi 4/5</span>
     </div>
   </div>
@@ -126,15 +126,15 @@
       </table>
     </div>
 
-    <!-- TRAINING ON APPLE-SILICON MPS -->
+    <!-- TRAINING ON NVIDIA A100 -->
     <div class="card">
-      <h2><span class="dot"></span>Training on Apple-Silicon MPS</h2>
+      <h2><span class="dot"></span>Training on NVIDIA A100 (CUDA)</h2>
       <table>
-        <tr><td class="k">Cluster</td><td class="v">local M-series (MPS) · no A100 available</td></tr>
+        <tr><td class="k">Cluster</td><td class="v">NVIDIA A100 (CUDA) · 1 GPU · seed 0</td></tr>
         <tr><td class="k">Objective</td><td class="v">joint CE: intent (20-way) + slot (19-way)</td></tr>
         <tr><td class="k">Optimizer</td><td class="v">AdamW (lr 3e-4, wd 1e-4, LS 0.1) · seed 0</td></tr>
-        <tr><td class="k">Epochs</td><td class="v">84 (early-stop) · train loss 2.15</td></tr>
-        <tr><td class="k">Wall-clock</td><td class="v">≈39.3 min · 1 node</td></tr>
+        <tr><td class="k">Epochs</td><td class="v">95 (early-stop, best 80) · train loss 2.12</td></tr>
+        <tr><td class="k">Wall-clock</td><td class="v">≈7.2 min · 1 node</td></tr>
         <tr><td class="k">Encoder</td><td class="v">1 Conformer layer · 64-d · 4 heads</td></tr>
       </table>
     </div>
@@ -143,12 +143,12 @@
     <div class="card">
       <h2><span class="dot"></span>Validation (held-out, unseen speakers)</h2>
       <table>
-        <tr><td class="k">Intent accuracy</td><td class="v"><span class="hl">85.2%</span> [84.2, 86.2] · bal. 83.5%</td></tr>
-        <tr><td class="k">Slot exact match</td><td class="v">69.3% end-to-end · 77.3% given intent</td></tr>
+        <tr><td class="k">Intent accuracy</td><td class="v"><span class="hl">85.6%</span> [84.5, 86.6] · bal. 84.1%</td></tr>
+        <tr><td class="k">Slot exact match</td><td class="v">69.5% end-to-end · 77.2% given intent</td></tr>
         <tr><td class="k">In-scope precision @τ0.7</td><td class="v">97.1% precision · 92.2% recall</td></tr>
         <tr><td class="k">Inference latency</td><td class="v">p50 0.74 ms · p95 0.88 ms (M-series CPU)</td></tr>
         <tr><td class="k">Wake word (openWakeWord)</td><td class="v">"hey mycroft" · peak 0.9996 · 0/250 FA @0.75</td></tr>
-        <tr><td class="k">INT8 parity</td><td class="v">98.4% argmax match · 0.32 MB (−69%)</td></tr>
+        <tr><td class="k">INT8 parity</td><td class="v">99.2% argmax match · 0.32 MB (−69%)</td></tr>
         <tr><td class="k">Runtime</td><td class="v">onnxruntime · int8 · CPU · fully offline</td></tr>
       </table>
     </div>
@@ -187,7 +187,7 @@
     <div class="meta">
       <span class="chip">Alyanna Lopez</span>
       <span class="chip b">October 2026</span>
-      <span class="chip">Conformer-S · 16,628 clips · MPS → RPi 4/5</span>
+      <span class="chip">Conformer-S · 16,628 clips · A100 → RPi 4/5</span>
     </div>
   </div>
 
@@ -233,13 +233,13 @@
       <table>
         <tr><td class="k">GitHub repository</td><td class="v"><a href="https://github.com/alyannalopez/MLOps-Exercises">github.com/alyannalopez/MLOps-Exercises</a></td></tr>
         <tr><td class="k">Dataset location</td><td class="v">HF · airimonda/ai231-me2-voice-commands · DOI 10.57967/hf/10723</td></tr>
-        <tr><td class="k">Compute</td><td class="v">local Apple-Silicon MPS (no A100) · 1 node · 84 epochs · seed 0</td></tr>
+        <tr><td class="k">Compute</td><td class="v">NVIDIA A100 (CUDA) · 1 node · 95 epochs (best 80) · seed 0</td></tr>
         <tr><td class="k">Model weights</td><td class="v">conformer_s_float.onnx (1.03 MB) · conformer_s_int8.onnx (0.32 MB)</td></tr>
         <tr><td class="k">Wake word</td><td class="v">openWakeWord "hey mycroft" · MIT · dscripka/openWakeWord</td></tr>
       </table>
       <div class="foot-note">
         Winner of the 5-architecture benchmark: two-head Conformer-S (246k params), test accuracy
-        85.2% [84.2, 86.2] on 4,443 held-out clips from 115 unseen speakers; slot exact-match 69.3%.
+        85.6% [84.5, 86.6] on 4,443 held-out clips from 115 unseen speakers; slot exact-match 69.5%.
         All figures taken from report/stage5_evaluation.md and report/stage6_deployment.md.
       </div>
     </div>
