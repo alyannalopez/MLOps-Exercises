@@ -1,68 +1,68 @@
-# ME2 — Voice Command Model (VCM)
+# ME2 — Voice-Controlled Smart Device (VCM)
 
-**AI231 Machine Learning Engineering | Version 6**
+Tiny, standalone **Voice Command Model** for real-time smart-device command
+recognition on a Raspberry Pi 4/5. No cloud inference, no LLM, **no ASR**.
 
-A tiny voice command model that classifies 19 smart-device intents (93 phrase variations) + REJECT from 1-second audio clips. Designed for Raspberry Pi 4 (4 GB) deployment with openWakeWord gating.
+## v7 — what's new
 
-## Results
+- **New architecture: two-head `conformer_s`.** A small Conformer encoder
+  (246,055 params) with an `intent_head` (20-way) **and** a `slot_head` (19-way).
+  Slots (timer durations, temperatures, colors, …) are decoded **directly by the
+  network** — the ASR stage from earlier versions is gone entirely.
+- **Fully working terminal VCM.** Live mic loop: wake word → classify intent →
+  decode slot → act on a simulated device → spoken-style response.
+- **Deployable ONNX** (float + int8), dual output, sub-millisecond inference.
 
-| Model | Params | Test Acc |
-|-------|--------|----------|
-| Logistic | 80K | 39.8% |
-| DNN | 1.06M | 64.5% |
-| 1-D CNN | 224K | 73.2% |
-| **CRNN** | **719K** | **77.7%** ✅ |
-| Transformer | 273K | 61.6% |
-
-**Best model:** CRNN (CNN + BiLSTM) — 77.65% test accuracy, 2 ms inference (CPU), 702 KB INT8.
-
-## Structure
-
-```
-ME2/
-├── code/
-│   ├── prep_data.py          # Download → extract → features
-│   ├── train_models.py       # 5 architectures, early stopping
-│   ├── evaluate.py           # Full metric battery
-│   ├── plot_report.py        # 10 figures
-│   ├── wakeword.py           # openWakeWord integration
-│   ├── ui_simulation.py      # Hardware command simulation
-│   └── benchmark/            # vcm-benchmark harness (sim mode)
-├── data/
-│   ├── hf/                   # HuggingFace dataset (parquet)
-│   ├── audio/                # Extracted WAV clips
-│   ├── features/             # MFCC + log-mel .npz
-│   ├── music/                # 5 CC-licensed tracks
-│   └── manifest.csv          # 20,611-row manifest
-├── models/                   # Checkpoints + results JSON
-├── report/
-│   ├── report.md             # Full technical report
-│   ├── evaluation_results.json
-│   ├── wakeword_info.json
-│   ├── ui_simulation_log.json
-│   └── plots/                # 10 figures
-└── ME2_Instructions-and-Notes.pdf
-```
-
-## Quick Start
+## Quick start (terminal VCM)
 
 ```bash
-python3 code/prep_data.py       # ~75s
-python3 code/train_models.py    # ~15 min (MPS)
-python3 code/evaluate.py        # ~30s
-python3 code/plot_report.py     # ~10s
-python3 code/wakeword.py        # ~5s
-python3 code/ui_simulation.py   # instant
+# 1. environment
+python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
+
+# 2. live microphone (wake word: "hey mycroft", then a command)
+./.venv/bin/python -m runtime.main --mic
+
+# 3. or replay a recorded clip
+./.venv/bin/python -m runtime.main --file pi_bundle/sample_clips/timer_sample.wav
+
+# 4. scripted end-to-end demo (all 10 command categories)
+./.venv/bin/python -m runtime.main --demo
 ```
 
-## Dataset
+Example live interaction:
 
-[`airimonda/ai231-me2-voice-commands`](https://huggingface.co/datasets/airimonda/ai231-me2-voice-commands) — 19 intents, 93 commands, speaker-disjoint splits, synthetic negatives for rejection.
+```
+> hey mycroft set a timer for ten seconds
+  [wake] peak 0.987  [intent] TIMER (0.95)  [slot] 10 seconds
+  Timer set for 10 seconds.
+```
 
-## Wake Word
+## Layout
+```
+vcm/        core library: features, models (5 archs), slots, augment, losses, export
+runtime/    on-device runtime (wakeword + VCMClassifier + device actions + main loop)
+scripts/    pipeline: hf_to_dataset -> pack_data -> train_vcm -> evaluate_vcm -> export
+configs/    variations.csv (93 command phrasings, from the HF dataset)
+data/       hf/ (raw HF parquet), me2-dataset/ (manifest+audio), packs/ (npz)   [gitignored]
+models/     ONNX exports (committed) + seed checkpoints (gitignored)  -> models/README.md
+pi_bundle/  self-contained Pi deployment: ONNX + runtime + systemd unit + sample clips
+report/     evaluation JSON/figures + stage reports
+results/    training/eval summaries
+tests/      unit tests (39)
+docs/       dataset + architecture documentation + deck
+```
 
-[openWakeWord](https://github.com/dscripka/openWakeWord) — "hey jarvis", ONNX, 2.2 ms/chunk, 36× real-time, Pi 4 compatible.
+## Pipeline
+1. `scripts/hf_to_dataset.py` — build manifest from HF parquet, verify schema
+2. `scripts/pack_data.py` — decode audio, extract log-mel, pack npz bundles
+3. `scripts/train_vcm.py --arch <cnn|crnn|tcn|conformer_s|mlp>` — train w/ early stopping
+4. `scripts/evaluate_vcm.py --checkpoint models/<arch>/best.pt` — full metric suite
+5. `scripts/export_deploy_onnx.py --checkpoint models/conformer_s_seed0/best.pt` — ONNX + parity
 
-## Benchmark Harness
+## Headline results (conformer_s, held-out test)
+- Accuracy **85.2 %** (CI [84.2, 86.2]), balanced accuracy **83.5 %**
+- Slot exact-match **69.3 %** (77.3 % given correct intent)
+- Wake word: 0 false-accepts over 250 negative clips @ threshold 0.75
+- Inference: **~0.67 ms/clip** (≈1,494 clips/s)
 
-[`airimonda/vcm-benchmark`](https://github.com/airimonda/vcm-benchmark) — guided live benchmark for Pi deployment. Sim mode available for testing without hardware.
+Full detail in `report/` and `models/README.md`.

@@ -1,0 +1,23 @@
+{
+  "wakeword_model": "openwakeword hey_mycroft_v0.1 (onnx, CPU, openwakeword 0.4.0)",
+  "threshold": 0.5,
+  "positive_clip": {
+    "file": "synthetic TTS (macOS say) 'Hey Microft, please turn on the lights'",
+    "transcript": "hey microft please turn on the lights",
+    "peak_prob": 0.9995642900466919,
+    "wall_ms": 52.794625000387896,
+    "per_frame_ms_p50": 1.6974579993984662,
+    "per_frame_ms_p95": 1.7733749955368694,
+    "rt_factor": 0.021185112733082694
+  },
+  "neg_test": {
+    "n_clips": 250,
+    "peak_prob_max": 0.7063165903091431,
+    "peak_prob_mean": 0.0073843815326690675,
+    "false_triggers_at_threshold": 2,
+    "per_frame_ms_p50": 2.5307709984190296,
+    "per_frame_ms_p95": 3.1253912006286555,
+    "per_clip_wall_ms_p50": 70.74979149911087,
+    "per_clip_wall_ms_max": 184.4631659987499
+  }
+}

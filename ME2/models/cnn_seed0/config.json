@@ -1,0 +1,29 @@
+{
+  "arch": "cnn",
+  "seed": 0,
+  "n_params": 204340,
+  "best_epoch": 92,
+  "best_val_balanced_acc": 0.7589242757764573,
+  "final_val_acc": 0.7690176859151928,
+  "final_val_balanced_acc": 0.7589242757764573,
+  "final_val_oos_acc": 0.5920245398773006,
+  "train_seconds": 2248.8,
+  "epochs_run": 100,
+  "device": "mps",
+  "n_train": 11733,
+  "n_val": 4693,
+  "config": {
+    "arch": "cnn",
+    "epochs": 100,
+    "batch": 64,
+    "lr": 0.0003,
+    "weight_decay": 0.0001,
+    "patience": 15,
+    "real_weight": 5.0,
+    "oos_weight": 3.0,
+    "label_smoothing": 0.1,
+    "seed": 0,
+    "workers": 0,
+    "device": null
+  }
+}

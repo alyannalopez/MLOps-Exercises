@@ -1,0 +1,45 @@
+# data artifacts (regenerate with code/scripts/hf_to_dataset.py + pack_data.py)
+data/hf/
+data/me2-dataset/
+data/packs/
+data/noise/
+*.npy
+*.npz
+*.parquet
+
+# training runs (keep summaries/figures in results/)
+exp/
+!exp/README.md
+runtime_logs/
+logs/
+
+# models are committed EXCEPT bulky intermediate checkpoints
+models/**/*.pt
+!models/README.md
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# reference repos (architecture references, not part of the deliverable)
+ref/
+
+# misc
+.DS_Store
+*.console
+
+# LaTeX build artifacts (keep the .tex source + final .pdf)
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.synctex.gz
+docs/deck/build.log
+
+# Commercial/copyrighted music (brief requires copyright-free tracks only).
+# Only the synthesized track1..5 WAVs in assets/music/ are shipped.
+assets/music/*.mp3

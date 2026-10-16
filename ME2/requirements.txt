@@ -1,0 +1,16 @@
+torch>=2.2
+numpy
+pandas
+pyarrow
+soundfile
+scikit-learn
+tqdm
+datasets
+huggingface_hub
+onnx
+onnxruntime
+openwakeword>=0.4.0,<0.5   # pretrained "hey_mycroft" wake word (ONNX, Apache-2.0)
+                            # NOTE: the Mac dev box currently has 0.6.x installed;
+                            # runtime/wakeword.py supports both (0.4.0 API + 0.6.x fallback).
+sounddevice
+pytest
