@@ -28,8 +28,12 @@ from pathlib import Path
 # exists, so real MP3s can be dropped in later with no code change.
 _MUSIC_DIR = Path(__file__).resolve().parent.parent / "assets" / "music"
 _MUSIC_TRACKS = [
-    "track1_relaxing", "track2_upbeat", "track3_lofi",
-    "track4_demo_song", "track5_alarm",
+    "track1_relaxing",   # Isang Daan – Cup of Joe
+    "track2_upbeat",     # Kung Payagan – Cup of Joe
+    "track3_lofi",       # Lalayo – Cup of Joe
+    "track4_demo_song",  # Pamahiin – Cup of Joe
+    "track5_alarm",      # Sandali – Cup of Joe
+    "na_para_bang",      # Na Para Bang – Mariah Deborah
 ]
 
 

@@ -285,10 +285,14 @@ def ww_reset_buffers():
         pass
 
 
-# ── music playback (copyright-free demo tracks, brief task 8) ──────────────
+# ── music playback (real songs, brief task 8) ──────────────
 _MUSIC_TRACKS = [
-    "track1_relaxing", "track2_upbeat", "track3_lofi",
-    "track4_demo_song", "track5_alarm",
+    "track1_relaxing",   # Isang Daan – Cup of Joe
+    "track2_upbeat",     # Kung Payagan – Cup of Joe
+    "track3_lofi",       # Lalayo – Cup of Joe
+    "track4_demo_song",  # Pamahiin – Cup of Joe
+    "track5_alarm",      # Sandali – Cup of Joe
+    "na_para_bang",      # Na Para Bang – Mariah Deborah
 ]
 _PLAYER: subprocess.Popen | None = None
 
