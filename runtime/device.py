@@ -15,6 +15,7 @@ import os
 import random
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import threading
@@ -254,6 +255,32 @@ class SimulatedSmartHome:
         self.events: list[str] = []
         self._next_id = 1
         self._lock = threading.Lock()
+        self._player_proc: subprocess.Popen | None = None
+        self._install_cleanup()
+
+    def _install_cleanup(self) -> None:
+        """Ensure the audio player is killed when the process exits —
+        Ctrl-C, SIGTERM, normal return, or crash. Without this, afplay
+        becomes an orphan and keeps playing after the demo is gone."""
+        import atexit
+
+        def _shutdown():
+            self._stop_player()
+            self.restore_volume()
+
+        atexit.register(_shutdown)
+
+        # Also catch SIGINT/SIGTERM so the player dies immediately,
+        # before the interpreter begins its shutdown sequence.
+        def _sig_handler(signum, frame):
+            _shutdown()
+            sys.exit(0)
+
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            try:
+                signal.signal(sig, _sig_handler)
+            except (OSError, ValueError):
+                pass  # not in main thread (e.g. test runner) — atexit still covers us
 
     # -- bookkeeping -------------------------------------------------------
     def _log(self, msg: str) -> None:
