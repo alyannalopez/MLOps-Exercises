@@ -45,13 +45,27 @@ def _find_music_dir() -> Path:
 
 _MUSIC_DIR = _find_music_dir()
 _MUSIC_TRACKS = [
-    "track1_relaxing",   # Isang Daan – Cup of Joe
-    "track2_upbeat",     # Kung Payagan – Cup of Joe
-    "track3_lofi",       # Lalayo – Cup of Joe
-    "track4_demo_song",  # Pamahiin – Cup of Joe
-    "track5_alarm",      # Sandali – Cup of Joe
-    "na_para_bang",      # Na Para Bang – Mariah Deborah
+    "track1_relaxing",
+    "track2_upbeat",
+    "track3_lofi",
+    "track4_demo_song",
+    "track5_alarm",
+    "na_para_bang",
 ]
+
+_TRACK_TITLES: dict[str, str] = {
+    "track1_relaxing": "Isang Daan – Cup of Joe",
+    "track2_upbeat":   "Kung Payagan – Cup of Joe",
+    "track3_lofi":     "Lalayo – Cup of Joe",
+    "track4_demo_song":"Pamahiin – Cup of Joe",
+    "track5_alarm":    "Sandali – Cup of Joe",
+    "na_para_bang":    "Na Para Bang – Mariah Deborah",
+}
+
+
+def _track_title(stem: str) -> str:
+    """Human-readable song title for a track stem."""
+    return _TRACK_TITLES.get(stem, stem)
 
 
 def _pick_audio_file(stem: str) -> Path | None:
@@ -382,14 +396,15 @@ class SimulatedSmartHome:
         requested = m.group(1).strip(" .!") if m else ""
         # Pick a random copyright-free demo track (brief: "play randomly").
         stem = random.choice(_MUSIC_TRACKS)
+        title = _track_title(stem)
         path = _pick_audio_file(stem)
         self.state["music"].update(playing=True, paused=False, track=stem)
-        if path is not None and self._play_audio_bg(path, stem):
-            self._log(f"music PLAYING: {stem}")
+        if path is not None and self._play_audio_bg(path, title):
+            self._log(f"music PLAYING: {title}")
         else:
             # No player available (headless / CI) -> pure simulation.
-            self._log(f"music PLAYING (simulated): {stem}")
-        return f"Playing {stem}."
+            self._log(f"music PLAYING (simulated): {title}")
+        return f"Now playing: {title}"
 
     def pause(self) -> str:
         if not self.state["music"]["playing"]:
@@ -411,13 +426,14 @@ class SimulatedSmartHome:
         cur = self.state["music"]["track"]
         pool = [s for s in _MUSIC_TRACKS if s != cur]
         nxt = random.choice(pool) if pool else random.choice(_MUSIC_TRACKS)
+        title = _track_title(nxt)
         path = _pick_audio_file(nxt)
         self.state["music"]["track"] = nxt
         if path is not None:
             self._stop_player()
-            self._play_audio_bg(path, nxt)
-        self._log(f"music NEXT: {nxt}")
-        return f"Now playing {nxt}."
+            self._play_audio_bg(path, title)
+        self._log(f"music NEXT: {title}")
+        return f"Now playing: {title}"
 
     def volume_up(self) -> str:
         self.state["volume"] = min(100, self.state["volume"] + 10)
