@@ -256,14 +256,25 @@ def cmd_mic(args):
     with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="float32",
                         blocksize=MIC_FRAME) as stream:
         idle = 0
+        _was_playing = False
         while True:
             frame = np.asarray(stream.read(MIC_FRAME)[0]).flatten()
+            # Duck volume while music plays so the mic can hear the wake word.
+            is_playing = device.state["music"]["playing"]
+            if is_playing and not _was_playing:
+                device.duck_volume()
+            elif not is_playing and _was_playing:
+                device.restore_volume()
+            _was_playing = is_playing
             if armed["flag"]:
                 ev = ww.detect(frame)
                 if ev.triggered:
                     armed["flag"] = False
                     ww.reset()
                     print(f"\n*** wake word (p={ev.probability:.2f}) — listening ***")
+                    # Restore volume so the user hears the response clearly.
+                    device.restore_volume()
+                    _was_playing = False
                     audio = record_command(stream)
                     out = handle_command(disp, clf, audio, gate=True)
                     if out.get("slot"):

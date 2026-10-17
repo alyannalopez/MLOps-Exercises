@@ -26,7 +26,24 @@ from pathlib import Path
 # Copyright-free demo tracks (brief tasks 1 & 8). Synthesized by
 # scripts/generate_demo_mp3s.py; the runtime plays whichever of .mp3/.wav
 # exists, so real MP3s can be dropped in later with no code change.
-_MUSIC_DIR = Path(__file__).resolve().parent.parent / "assets" / "music"
+# Real songs live in pi_bundle/assets/music (the bundle ships them there); the
+# repo-root assets/music is a fallback. Search both so playback works whether
+# you run from the repo root or from inside pi_bundle.
+def _find_music_dir() -> Path:
+    here = Path(__file__).resolve().parent
+    candidates = [
+        here.parent / "pi_bundle" / "assets" / "music",
+        here.parent / "assets" / "music",
+        here.parent.parent / "pi_bundle" / "assets" / "music",
+        here.parent.parent / "assets" / "music",
+    ]
+    for c in candidates:
+        if c.is_dir() and any(c.glob("*.mp3")):
+            return c
+    return candidates[0]
+
+
+_MUSIC_DIR = _find_music_dir()
 _MUSIC_TRACKS = [
     "track1_relaxing",   # Isang Daan – Cup of Joe
     "track2_upbeat",     # Kung Payagan – Cup of Joe
@@ -53,6 +70,10 @@ def _audio_player_cmd(path: Path) -> list[str] | None:
         if shutil.which("aplay"):           # Linux / Pi
             return ["aplay", "-q", str(path)]
     elif path.suffix == ".mp3":
+        # afplay (macOS) decodes MP3 natively and is always present, so try it
+        # first; fall back to mpg123/ffplay on Linux/Pi.
+        if shutil.which("afplay"):
+            return ["afplay", str(path)]
         for cmd in (["mpg123", "-q", str(path)], ["ffplay", "-nodisp",
                  "-autoexit", str(path)]):
             if shutil.which(cmd[0]):
@@ -312,6 +333,49 @@ class SimulatedSmartHome:
             except subprocess.TimeoutExpired:
                 proc.kill()
         self._player_proc = None
+
+    # -- volume ducking (so the mic can hear the wake word over music) ------
+    def duck_volume(self) -> None:
+        """Lower system audio so the mic can pick up the wake word while
+        music is playing. Saves the original volume for restore_volume()."""
+        if sys.platform != "darwin":
+            return
+        if getattr(self, "_ducked", False):
+            return
+        try:
+            # Read current output volume (0-100)
+            out = subprocess.check_output(
+                ["osascript", "-e",
+                 "output volume of (get volume settings)"],
+                text=True, timeout=3).strip()
+            self._saved_volume = int(out)
+            # Duck to 15% — quiet enough for the mic to hear speech,
+            # still audible so the user knows music is playing.
+            subprocess.run(
+                ["osascript", "-e",
+                 "set volume output volume 15"],
+                timeout=3, check=False)
+            self._ducked = True
+            self._log(f"volume ducked {self._saved_volume}% -> 15%")
+        except Exception:
+            pass
+
+    def restore_volume(self) -> None:
+        """Restore system audio to the pre-duck level."""
+        if sys.platform != "darwin":
+            return
+        if not getattr(self, "_ducked", False):
+            return
+        vol = getattr(self, "_saved_volume", 50)
+        try:
+            subprocess.run(
+                ["osascript", "-e",
+                 f"set volume output volume {vol}"],
+                timeout=3, check=False)
+            self._log(f"volume restored -> {vol}%")
+        except Exception:
+            pass
+        self._ducked = False
 
     def play_music(self, phrase: str) -> str:
         m = re.search(r"(?:play|start)\s+(?:some\s+|the\s+)?(.+)", phrase.lower())
