@@ -24,8 +24,9 @@ ww = WakeWordDetector(threshold=0.75)
 print(f"OK: {ww.wakeword} model loaded (openwakeword {__import__('importlib.metadata', fromlist=['version']).version('openwakeword')})")
 EOF
 
-# Runtime code lives one level up (ME2 repo root); make it importable here
-ln -sfn .. runtime 2>/dev/null || true
+# Runtime code lives one level up (ME2 repo root); make it importable here.
+# Symlink to the actual subdirectory, not to ".." itself.
+ln -sfn ../runtime runtime 2>/dev/null || true
 ln -sfn ../vcm vcm 2>/dev/null || true
 
 echo "==> Verifying classifier loads..."
