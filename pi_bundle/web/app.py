@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 HERE = Path(__file__).resolve().parent
@@ -285,7 +285,12 @@ def ww_reset_buffers():
         pass
 
 
-# ── music playback (real songs, brief task 8) ──────────────
+# ── music playback (browser-side, tiny-alexa style) ────────────────────────
+# The browser plays the MP3 through an AudioContext GainNode. The server
+# never touches the audio — it just tells the browser which track to play.
+# Ducking is done in the browser: when the wake word fires, the GainNode
+# drops to 25% (smooth 80 ms ramp) so the mic can hear the user's voice.
+# This is exactly how tiny-alexa does it (DUCK = .25, setTargetAtTime .08).
 _MUSIC_TRACKS = [
     "track1_relaxing",   # Isang Daan – Cup of Joe
     "track2_upbeat",     # Kung Payagan – Cup of Joe
@@ -294,7 +299,6 @@ _MUSIC_TRACKS = [
     "track5_alarm",      # Sandali – Cup of Joe
     "na_para_bang",      # Na Para Bang – Mariah Deborah
 ]
-_PLAYER: subprocess.Popen | None = None
 
 
 def _pick_audio_file(stem: str) -> Path | None:
@@ -303,42 +307,6 @@ def _pick_audio_file(stem: str) -> Path | None:
         if p.exists():
             return p
     return None
-
-
-def _audio_player_cmd(path: Path) -> list[str] | None:
-    if path.suffix == ".wav":
-        if shutil.which("afplay"):
-            return ["afplay", str(path)]
-        if shutil.which("aplay"):
-            return ["aplay", "-q", str(path)]
-    elif path.suffix == ".mp3":
-        for cmd in (["mpg123", "-q", str(path)], ["ffplay", "-nodisp", "-autoexit", str(path)]):
-            if shutil.which(cmd[0]):
-                return cmd
-    return None
-
-
-def _play_audio_bg(path: Path) -> bool:
-    global _PLAYER
-    _stop_player()
-    cmd = _audio_player_cmd(path)
-    if cmd is None:
-        return False
-    try:
-        _PLAYER = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
-    except Exception:
-        return False
-
-
-def _stop_player() -> None:
-    global _PLAYER
-    if _PLAYER is not None:
-        try:
-            _PLAYER.terminate()
-        except Exception:
-            pass
-        _PLAYER = None
 
 
 # ── smart home state ───────────────────────────────────────────────────────
@@ -381,22 +349,14 @@ class SmartHomeState:
             stem = random.choice(_MUSIC_TRACKS)
             self.music_playing, self.paused = True, False
             self.current_track = stem
-            if _pick_audio_file(stem) is not None:
-                _play_audio_file_bg(stem)
             msg = f"\U0001f3b5 Playing: {stem}"
         elif command == "PAUSE":
             if self.music_playing:
                 self.paused = not self.paused
-                if self.paused:
-                    _stop_player()
-                    msg = "\u23f8\ufe0f Paused"
-                else:
-                    _play_audio_file_bg(self.current_track)
-                    msg = "\u25b6\ufe0f Resumed"
+                msg = "\u23f8\ufe0f Paused" if self.paused else "\u25b6\ufe0f Resumed"
             else:
                 msg = "\u26a0\ufe0f Nothing playing"
         elif command == "STOP":
-            _stop_player()
             self.music_playing, self.paused = False, False
             self.current_track = ""
             msg = "\u23f9\ufe0f Stopped"
@@ -404,7 +364,6 @@ class SmartHomeState:
             if self.music_playing:
                 pool = [s for s in _MUSIC_TRACKS if s != self.current_track]
                 self.current_track = random.choice(pool) if pool else random.choice(_MUSIC_TRACKS)
-                _play_audio_file_bg(self.current_track)
                 msg = f"\U0001f5ed\ufe0f Next track: {self.current_track}"
             else:
                 msg = "\u26a0\ufe0f Nothing playing"
@@ -486,13 +445,6 @@ class SmartHomeState:
         }
 
 
-def _play_audio_file_bg(stem: str) -> bool:
-    path = _pick_audio_file(stem)
-    if path is None:
-        return False
-    return _play_audio_bg(path)
-
-
 # ── app ────────────────────────────────────────────────────────────────────
 app = FastAPI(title="VCM Smart Home")
 STATE = SmartHomeState()
@@ -527,7 +479,6 @@ async def api_state():
 @app.post("/api/reset")
 async def api_reset():
     global STATE
-    _stop_player()
     STATE = SmartHomeState()
     return STATE.to_dict()
 
@@ -562,6 +513,18 @@ def _classify(y: np.ndarray, sr: int) -> dict:
         "confidence": round(float(probs.max()), 4),
         "top": top, "latency_ms": round(dt_ms, 1),
     }
+
+
+
+@app.get("/music/{filename}")
+async def music_file(filename: str):
+    """Serve a music file from the assets/music directory."""
+    safe = Path(filename).name  # prevent path traversal
+    fp = MUSIC_DIR / safe
+    if not fp.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    mime = {"mp3": "audio/mpeg", "wav": "audio/wav"}.get(fp.suffix.lstrip("."), "application/octet-stream")
+    return FileResponse(fp, media_type=mime, headers={"Cache-Control": "max-age=3600"})
 
 
 @app.websocket("/ws")

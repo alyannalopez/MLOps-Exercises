@@ -276,6 +276,17 @@ let armTimer=null, resultTimer=null, levelTimer=null;
 let lastIntent=null;
 const SR = 16000;
 
+/* ── music player (browser-side, tiny-alexa style) ─────────────────────
+   The MP3 plays through an AudioContext GainNode. When the wake word
+   fires, the gain drops to 25% (smooth 80 ms ramp) so the mic can hear
+   the user's voice over the music. Exactly how tiny-alexa does it. ── */
+const DUCK = 0.25;           // ducked gain (25%)
+let musicEl = null;          // HTMLAudioElement
+let musicGain = null;        // GainNode for ducking
+let musicCtx = null;         // dedicated AudioContext for music
+let musicDucked = false;
+let musicVolume = 0.8;       // user-set volume (0-1)
+
 /* intent → icon + which device tile(s) to pop */
 const ICON = {
   LIGHT_ON:'💡', LIGHT_OFF:'💡', BRIGHTNESS:'💡', COLOR:'🎨',
@@ -386,16 +397,19 @@ function setPhase(p){
 }
 function onWake(){
   chimeWake();                 // chime #1
+  mDuck(true);                 // quieter music so the command is heard
   setPhase('armed');           // orb turns blue, faster pulse
   clearTimeout(armTimer);
   armTimer=setTimeout(()=>{    // if nothing said in 3.5 s, go back to idle
     setPhase('idle');
+    mDuck(false);              // restore volume if no command followed
   }, 3500);
 }
 
 /* ── a command came back: pop the panel ── */
 function onResult(m){
   clearTimeout(armTimer);
+  mDuck(false);                // restore music volume
   chimeDone();                 // chime #2
   lastIntent=m.intent;
   $('hero').style.display='flex';
@@ -429,6 +443,17 @@ function buildTile(kind,s){
       <div class="swatch" style="background:rgb(${s.rgb[0]},${s.rgb[1]},${s.rgb[2]})"></div>`;
   } else if(kind==='music'){
     const playing=s.music_playing;
+    // Sync browser player with server state (tiny-alexa style)
+    if(playing && !s.paused && (!musicEl || musicEl.paused)){
+      if(s.current_track) mPlay(s.current_track);
+    } else if(!playing && musicEl && !musicEl.paused){
+      mStop();
+    } else if(playing && s.paused && musicEl && !musicEl.paused){
+      mPause();
+    } else if(playing && !s.paused && musicEl && musicEl.paused){
+      mResume();
+    }
+    if(playing) mSetVolume(s.volume/100);
     d.innerHTML = `<div class="ic">🎵</div><div class="lbl">Music</div>
       <div class="val">${playing?(s.paused?'Paused':'Playing'):'Stopped'}</div>
       <div class="meter"><i style="width:${s.volume}%"></i></div>
@@ -485,6 +510,50 @@ function resampleLinear(x, from, to){
 function b64(buf){ let s=''; const bytes=new Uint8Array(buf);
   for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]);
   return btoa(s); }
+
+/* ── music player controls ─────────────────────────────────────────────── */
+function ensureMusicCtx(){
+  if(!musicCtx){
+    musicCtx = new (window.AudioContext||window.webkitAudioContext)();
+    musicGain = musicCtx.createGain();
+    musicGain.gain.value = musicVolume;
+    musicGain.connect(musicCtx.destination);
+  }
+  if(musicCtx.state==='suspended') musicCtx.resume();
+}
+function mDuck(on){
+  if(!musicGain) return;
+  musicDucked = on;
+  const level = musicVolume * (on ? DUCK : 1);
+  const now = musicCtx.currentTime;
+  musicGain.gain.cancelScheduledValues(now);
+  musicGain.gain.setTargetAtTime(level, now, 0.08);  // smooth 80ms ramp
+}
+function mPlay(track){
+  ensureMusicCtx();
+  if(musicEl){ musicEl.pause(); musicEl.src=''; }
+  musicEl = new Audio(`/music/${track}.mp3`);
+  musicEl.loop = true;
+  // Route through the GainNode for ducking (tiny-alexa style)
+  const srcNode = musicCtx.createMediaElementSource(musicEl);
+  srcNode.connect(musicGain);
+  musicEl.play().catch(e=>console.warn('music play failed:', e));
+  mDuck(false);  // start at full volume
+}
+function mPause(){
+  if(musicEl) musicEl.pause();
+}
+function mResume(){
+  if(musicEl) musicEl.play().catch(()=>{});
+}
+function mStop(){
+  if(musicEl){ musicEl.pause(); musicEl.src=''; musicEl=null; }
+  musicDucked = false;
+}
+function mSetVolume(v){
+  musicVolume = Math.max(0, Math.min(1, v));
+  mDuck(musicDucked);  // re-apply with new base volume
+}
 
 /* ── wiring ── */
 let workletRef=null;
