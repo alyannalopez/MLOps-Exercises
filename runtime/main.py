@@ -254,8 +254,31 @@ def cmd_mic(args):
     print("Speak the command right after the wake word (up to 2 s).")
     print("Slots (time, color, brightness, etc.) are extracted by the model.")
     print('Ctrl-C to quit.')
-    with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="float32",
-                        blocksize=MIC_FRAME) as stream:
+    # Resolve the input device: explicit --device wins, otherwise let
+    # PortAudio pick its default.  Print what we're using so the user can
+    # see whether the right mic was selected.
+    dev_idx = getattr(args, "device", None)
+    if dev_idx is not None:
+        dev_info = sd.query_devices(dev_idx, "input")
+        print(f"Using input device {dev_idx}: {dev_info['name']}")
+    else:
+        try:
+            dev_idx = sd.default.device[0]
+            if dev_idx is not None and dev_idx >= 0:
+                dev_info = sd.query_devices(dev_idx, "input")
+                print(f"Using default input device {dev_idx}: {dev_info['name']}")
+            else:
+                print("WARNING: no default input device found. "
+                      "List devices with:  ./.venv/bin/python -c \"import sounddevice; print(sounddevice.query_devices())\"")
+                print("Then re-run with:  --device <index>")
+        except Exception:
+            print("WARNING: could not query default input device.")
+
+    stream_kwargs = dict(samplerate=SAMPLE_RATE, channels=1, dtype="float32",
+                         blocksize=MIC_FRAME)
+    if dev_idx is not None and dev_idx >= 0:
+        stream_kwargs["device"] = dev_idx
+    with sd.InputStream(**stream_kwargs) as stream:
         idle = 0
         _was_playing = False
         while True:
@@ -311,6 +334,8 @@ def main(argv=None):
     g.add_argument("--mic", action="store_true")
     g.add_argument("--file", type=str)
     g.add_argument("--demo", action="store_true")
+    p.add_argument("--device", type=int, default=None,
+                   help="PortAudio input device index (see: python -c \"import sounddevice; print(sounddevice.query_devices())\")")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
