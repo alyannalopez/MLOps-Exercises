@@ -317,6 +317,119 @@ def cmd_mic(args):
                         print(">>> " + msg)
 
 
+# --- Direct WAV replay (benchmark, no mic / no laptop speaker) --------------
+class _ReplayStream:
+    """Drop-in stand-in for a sounddevice InputStream that replays pre-loaded
+    float32 samples.  read(n) returns the next n samples (zero-padded at the
+    end) shaped (n, 1) — exactly what sd.InputStream.read yields for a mono
+    stream — so the wake-word detector and record_command() consume it
+    unchanged."""
+
+    def __init__(self, samples: np.ndarray):
+        self._buf = np.ascontiguousarray(samples, dtype=np.float32)
+        self._pos = 0
+
+    def read(self, n: int):
+        if self._pos >= len(self._buf):
+            seg = np.zeros(n, dtype=np.float32)
+        else:
+            seg = self._buf[self._pos:self._pos + n]
+            if seg.size < n:
+                seg = np.concatenate([seg, np.zeros(n - seg.size, np.float32)])
+            self._pos += seg.size
+        return seg.reshape(-1, 1), 0
+
+
+def _load_wav(path: Path) -> np.ndarray:
+    """Load a WAV as mono float32 at SAMPLE_RATE (resample if needed)."""
+    import soundfile as sf
+    audio, sr = sf.read(str(path), dtype="float32")
+    if audio.ndim > 1:
+        audio = audio.mean(axis=1)
+    if sr != SAMPLE_RATE:
+        import scipy.signal
+        audio = scipy.signal.resample_poly(audio, SAMPLE_RATE, sr).astype(np.float32)
+    return audio
+
+
+def cmd_wavdir(args):
+    """Replay a directory of trial WAVs straight through the live pipeline.
+
+    Each WAV is fed frame-by-frame into the SAME wake-word detector +
+    record_command() + classifier used by --mic, but with no microphone and
+    no laptop speaker.  One JSON result is printed per trial (and written to
+    --out) so the laptop can score it against plan.json.
+    """
+    import soundfile as sf  # noqa: F401  (ensures libsndfile present)
+    from runtime.wakeword import WakeWordDetector
+
+    wavdir = Path(args.wavdir)
+    wavs = sorted(wavdir.glob("*.wav"))
+    if not wavs:
+        raise SystemExit(f"no .wav files in {wavdir}")
+
+    clf = VCMClassifier(args.model, confidence_threshold=args.threshold)
+    device = SimulatedSmartHome()
+    disp = SkillDispatcher(device)
+    ww = WakeWordDetector(wakeword=args.wakeword, threshold=args.ww_threshold)
+
+    out_fh = None
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        out_fh = open(args.out, "w", encoding="utf-8")
+
+    print(f"Replaying {len(wavs)} trial WAV(s) from {wavdir} "
+          f"(threshold={args.threshold}, ww_threshold={args.ww_threshold}).",
+          flush=True)
+
+    for i, wav in enumerate(wavs):
+        samples = _load_wav(wav)
+        ww.reset()
+        stream = _ReplayStream(samples)
+        triggered = False
+        pred = None
+        t0 = time.perf_counter()
+        # Drive the pipeline exactly like cmd_mic: read MIC_FRAME chunks,
+        # detect the wake word, then record the command from the same stream.
+        while stream._pos < len(samples):
+            frame = np.asarray(stream.read(MIC_FRAME)[0]).flatten()
+            if not triggered:
+                ev = ww.detect(frame)
+                if ev.triggered:
+                    triggered = True
+                    ww.reset()
+                    audio = record_command(stream)
+                    out = handle_command(disp, clf, audio, gate=not args.no_gate)
+                    pred = out
+                    break
+        wall_ms = (time.perf_counter() - t0) * 1000.0
+
+        rec = {
+            "trial": wav.stem,
+            "order": i,
+            "triggered": triggered,
+            "wall_ms": round(wall_ms, 1),
+        }
+        if pred is not None:
+            rec.update({
+                "intent": pred.get("intent"),
+                "slot": pred.get("slot"),
+                "confidence": round(pred.get("confidence", 0.0), 4) if pred.get("confidence") is not None else None,
+                "latency_ms": round(pred.get("latency_ms", 0.0), 1) if pred.get("latency_ms") is not None else None,
+                "acted": pred.get("acted"),
+                "response": pred.get("response"),
+            })
+        line = json.dumps(rec)
+        print(line, flush=True)
+        if out_fh:
+            out_fh.write(line + "\n")
+            out_fh.flush()
+
+    if out_fh:
+        out_fh.close()
+        print(f"\nSaved {len(wavs)} results -> {args.out}", flush=True)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="ME2 VCM runtime")
     p.add_argument("--model", type=str, default=str(DEFAULT_ONNX))
@@ -334,6 +447,10 @@ def main(argv=None):
     g.add_argument("--mic", action="store_true")
     g.add_argument("--file", type=str)
     g.add_argument("--demo", action="store_true")
+    g.add_argument("--wavdir", type=str,
+                   help="replay every .wav in this dir through the live pipeline (no mic)")
+    p.add_argument("--out", type=Path, default=None,
+                   help="--wavdir: write one JSON result per trial to this file")
     p.add_argument("--device", type=int, default=None,
                    help="PortAudio input device index (see: python -c \"import sounddevice; print(sounddevice.query_devices())\")")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -349,6 +466,8 @@ def main(argv=None):
         cmd_file(args)
     elif args.demo:
         cmd_demo(args)
+    elif args.wavdir:
+        cmd_wavdir(args)
     elif args.mic:
         cmd_mic(args)
 
