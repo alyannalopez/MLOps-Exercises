@@ -267,10 +267,10 @@ def load_wakeword():
         det.detect(np.zeros(WW_CHUNK, dtype=np.float32))   # warm up
         WW_DETECTOR = det
         print(f"[vcm-web] wake word 'hey mycroft' ready (openWakeWord, "
-              f"thr={WW_THRESHOLD})")
+              f"thr={WW_THRESHOLD})", flush=True)
         return det
     except Exception as e:
-        print(f"[vcm-web] wake word unavailable ({e}); tap-to-talk only")
+        print(f"[vcm-web] wake word unavailable ({e}); tap-to-talk only", flush=True)
         return None
 
 
@@ -501,9 +501,10 @@ WAKE_ENABLED = True
 async def startup():
     global SESSION, IN_NAME
     SESSION, IN_NAME = load_session(MODEL_NAME)
-    print(f"[vcm-web] loaded model: {MODEL_NAME}")
+    print(f"[vcm-web] loaded model: {MODEL_NAME}", flush=True)
     if WAKE_ENABLED:
         await asyncio.to_thread(load_wakeword)
+    print(f"[vcm-web] wake word ready: {WW_DETECTOR is not None}", flush=True)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -680,7 +681,7 @@ def main():
     url = f"http://{args.host}:{args.port}"
     if not args.no_browser:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
-    print(f"[vcm-web] opening {url}  (model: {args.model})")
+    print(f"[vcm-web] opening {url}  (model: {args.model})", flush=True)
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 
