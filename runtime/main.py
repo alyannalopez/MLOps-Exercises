@@ -93,6 +93,7 @@ def handle_command(dispatcher: SkillDispatcher, classifier: VCMClassifier,
         "category": outcome.category,
         "confidence": res.confidence,
         "latency_ms": res.latency_ms,
+        "audio_ms": res.audio_ms,
         "response": outcome.response,
         "phrase": phrase or (slot or ""),
         "slot": slot,
@@ -304,6 +305,8 @@ def main(argv=None):
                    help="openWakeWord pretrained model name (default: hey_mycroft)")
     p.add_argument("--phrase", type=str, default=None,
                    help="spoken-phrase override for slot parsing (--file mode)")
+    p.add_argument("--log-file", type=Path, default=None,
+                   help="also write log lines to this file (for the VCM benchmark)")
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--mic", action="store_true")
     g.add_argument("--file", type=str)
@@ -312,6 +315,11 @@ def main(argv=None):
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(levelname)s %(name)s: %(message)s")
+    if args.log_file:
+        args.log_file.parent.mkdir(parents=True, exist_ok=True)
+        fh = logging.FileHandler(args.log_file)
+        fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        logging.getLogger().addHandler(fh)
     if args.file:
         cmd_file(args)
     elif args.demo:

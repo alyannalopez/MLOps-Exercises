@@ -50,6 +50,7 @@ class CommandResult:
     latency_ms: float
     slot: str | None = None
     slot_confidence: float | None = None
+    audio_ms: float = 1000.0
     in_scope: bool = field(init=False)
 
     def __post_init__(self):
@@ -116,6 +117,7 @@ class VCMClassifier:
             latency_ms=latency_ms,
             slot=slot,
             slot_confidence=slot_conf,
+            audio_ms=CLIP_SECONDS * 1000.0,
         )
 
     def classify_gated(self, waveform: np.ndarray) -> CommandResult | None:
