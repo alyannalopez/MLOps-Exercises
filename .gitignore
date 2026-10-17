@@ -21,9 +21,9 @@ Thumbs.db
 *.log
 serve_logs/
 serve_registry.json
-pi_bundle/web/_ws_*.py
-pi_bundle/web/_ws_*.out
-pi_bundle/web/_ww_check.py
+ME2/pi_bundle/web/_ws_*.py
+ME2/pi_bundle/web/_ws_*.out
+ME2/pi_bundle/web/_ww_check.py
 docs/deck/*.aux
 docs/deck/*.nav
 docs/deck/*.snm
@@ -37,9 +37,9 @@ local_search/
 pi_bundle.zip
 
 # --- Web demo bundle (pi_bundle/): exclude local venv + caches, keep code + models ---
-pi_bundle/.venv/
-pi_bundle/**/__pycache__/
-pi_bundle/**/*.py[cod]
+ME2/pi_bundle/.venv/
+ME2/pi_bundle/**/__pycache__/
+ME2/pi_bundle/**/*.py[cod]
 
 # --- venv ---
 .venv/
