@@ -249,9 +249,44 @@ def load_session(model_name: str):
 # silently fell back to tap-to-talk (no wake word).
 WW_DETECTOR = None
 WW_CHUNK = 1280          # 80 ms @ 16 kHz (openWakeWord native frame size)
-WW_PRIMING = 80          # 6.4 s of silence to prime the internal buffers
-WW_MIN_GAP = 1.2         # ignore re-triggers within this many seconds
 WW_THRESHOLD = 0.5       # same as the terminal demo (runtime/main.py --ww-threshold)
+
+# ── tiny-alexa detection policy (src/infer.py) ─────────────────────────────
+# The old web server fed the detector a single 80 ms chunk and trusted one
+# score >= 0.5. openWakeWord's score is a rolling 30-frame average, so a
+# single-chunk check fires on partial phrases ("hey...") and re-fires for the
+# whole spoken word. tiny-alexa fixes both: require PATIENCE consecutive
+# chunks above threshold, warm up WARMUP_CHUNKS before trusting scores, and
+# stay refractory REFRACTORY_CHUNKS after a fire.
+WW_PATIENCE = 2          # 2 x 80 ms of sustained score before firing
+WW_WARMUP_CHUNKS = 10    # ~0.8 s after startup/reset before trusting scores
+WW_REFRACTORY_CHUNKS = 15  # ~1.2 s after a detection: score stays high for
+                           # the whole spoken word, so without this one "hey
+                           # mycroft" fires several times
+
+# ── tiny-alexa command endpointing (src/server.py) ─────────────────────────
+# The old web server started recording the command IMMEDIATELY on the wake
+# trigger, so the tail of "mycroft" leaked into the command window and the
+# 1.2 s auto-stop cut off anything said slightly later. tiny-alexa instead:
+#   1. skips WAKE_TAIL_CHUNKS (~0.24 s) so the end of the wake word is gone,
+#   2. waits for speech above an adaptive threshold (4x the pre-wake room
+#      noise floor) with PREROLL_CHUNKS of audio kept so the quiet onset of
+#      the first word ("k" in "call", "s" in "stop") isn't clipped,
+#   3. records until END_SILENCE_CHUNKS of trailing silence (or a 4.8 s cap),
+#   4. exits early once EARLY_EXIT_SILENCE_CHUNKS of silence follow and the
+#      model is >= EARLY_EXIT_PROB sure.
+WAKE_TAIL_CHUNKS = 3
+NOISE_HISTORY_CHUNKS = 40
+NOISE_PERCENTILE = 20
+MIN_SPEECH_RMS = 0.006
+SPEECH_OVER_NOISE = 4.0
+MAX_SPEECH_THRESHOLD = 0.04
+PREROLL_CHUNKS = 3
+END_SILENCE_CHUNKS = 7      # 0.56 s of silence ends the command
+EARLY_EXIT_SILENCE_CHUNKS = 2
+EARLY_EXIT_PROB = 0.95
+MAX_COMMAND_CHUNKS = 60     # 4.8 s cap
+NO_SPEECH_TIMEOUT_S = 6.0   # give up if nothing is said after the wake word
 
 
 def load_wakeword():
@@ -267,11 +302,57 @@ def load_wakeword():
         det.detect(np.zeros(WW_CHUNK, dtype=np.float32))   # warm up
         WW_DETECTOR = det
         print(f"[vcm-web] wake word 'hey mycroft' ready (openWakeWord, "
-              f"thr={WW_THRESHOLD})", flush=True)
+              f"thr={WW_THRESHOLD}, patience={WW_PATIENCE})", flush=True)
         return det
     except Exception as e:
         print(f"[vcm-web] wake word unavailable ({e}); tap-to-talk only", flush=True)
         return None
+
+
+class _WWGate:
+    """tiny-alexa's detection policy on top of the openWakeWord model.
+
+    Feeding one 80 ms chunk per call and trusting a single score >= threshold
+    makes the detector fire on partial phrases and re-fire for the whole
+    spoken wake word (openWakeWord's score is a rolling 30-frame average, so
+    it stays elevated long after the phrase ends). The gate requires
+    PATIENCE consecutive high chunks, ignores scores during a warm-up period,
+    and goes refractory after a fire.
+    """
+
+    def __init__(self, det, threshold: float = WW_THRESHOLD,
+                 patience: int = WW_PATIENCE):
+        self.det = det
+        self.threshold = threshold
+        self.patience = patience
+        self.streak = 0
+        self.reset()
+
+    def reset(self):
+        self.streak = 0
+        self.chunks_since_reset = 0
+        self.refractory_left = 0
+        self.det.reset()
+
+    def process(self, chunk_int16: np.ndarray) -> bool:
+        """One 80 ms int16 chunk in -> True if the wake word fired."""
+        ev = self.det.detect(chunk_int16)
+        score = ev.probability
+        self.chunks_since_reset += 1
+        if self.refractory_left > 0:
+            self.refractory_left -= 1
+            return False
+        if self.chunks_since_reset <= WW_WARMUP_CHUNKS:
+            return False
+        if score >= self.threshold:
+            self.streak += 1
+        else:
+            self.streak = 0
+        if self.streak >= self.patience:
+            self.streak = 0
+            self.refractory_left = WW_REFRACTORY_CHUNKS
+            return True
+        return False
 
 
 def ww_reset_buffers():
@@ -527,108 +608,207 @@ async def music_file(filename: str):
     return FileResponse(fp, media_type=mime, headers={"Cache-Control": "max-age=3600"})
 
 
+def _rms(x: np.ndarray) -> float:
+    return float(np.sqrt(np.mean(x * x))) if len(x) else 0.0
+
+
 @app.websocket("/ws")
 async def ws(websocket: WebSocket):
-    global STATE
+    """Browser <-> server voice link (tiny-alexa architecture).
+
+    The browser streams 16 kHz int16 PCM as raw binary WebSocket frames
+    (80 ms chunks, exactly what openWakeWord wants). A dedicated worker
+    thread owns the wake-word gate and the command state machine so
+    inference never blocks the event loop; results come back over an
+    asyncio queue.
+    """
     await websocket.accept()
-    wake_buf: list[np.ndarray] = []   # rolling window for the wake word
-    cmd_buf: list[np.ndarray] = []    # recorded command after a trigger
-    phase = "idle"                    # idle -> recording -> busy
-    last_trigger = 0.0
-    primed = False
 
-    def _feed_wake(pcm: np.ndarray):
-        """Feed 16 kHz float samples to the wake-word detector; True on trigger.
-        Same detector + threshold as the terminal demo."""
-        nonlocal last_trigger
-        if WW_DETECTOR is None:
-            return False
-        triggered = False
-        for i in range(0, len(pcm) - WW_CHUNK + 1, WW_CHUNK):
-            chunk = pcm[i:i + WW_CHUNK]
-            ev = WW_DETECTOR.detect(chunk)
-            if ev.triggered:
-                if time.time() - last_trigger > WW_MIN_GAP:
-                    last_trigger = time.time()
-                    triggered = True
-        return triggered
+    import collections
+    import queue
 
-    def _finish_command(y: np.ndarray):
-        """Classify + act; returns the result payload dict."""
+    gate = _WWGate(WW_DETECTOR) if WW_DETECTOR is not None else None
+    loop = asyncio.get_running_loop()
+    q: "queue.Queue[np.ndarray | None]" = queue.Queue()
+    evq: "asyncio.Queue[dict | None]" = asyncio.Queue()
+
+    def emit(ev: dict | None):
+        loop.call_soon_threadsafe(evq.put_nowait, ev)
+
+    def _finish_command(y: np.ndarray) -> dict:
+        """Classify + act; returns the result payload dict.
+
+        Reads the current global STATE explicitly: assigning to the module
+        global elsewhere in this function (the "reset" handler) would turn
+        STATE into a local of ws(), and Python forbids reading a local
+        before assignment — so reference globals.STATE directly.
+        """
         res = _classify(y, SR)
         intent = res["intent"]
         slot = res.get("slot") or ""
-        status = STATE.execute(intent, slot)
+        status = globals()["STATE"].execute(intent, slot)
         return {
             "type": "result", "intent": intent, "name": res["name"],
             "slot": slot, "confidence": res["confidence"], "top": res["top"],
             "latency_ms": res["latency_ms"], "status": status,
-            "state": STATE.to_dict(),
+            "state": globals()["STATE"].to_dict(),
         }
+
+    def worker():
+        """tiny-alexa's command state machine, one 80 ms chunk at a time.
+
+        Phases:
+          None (idle)  -> feed the wake gate every chunk; keep a rolling
+                          history of chunk RMS for the noise floor.
+          "tail"       -> skip the end of the wake word (~0.24 s).
+          "wait_speech"-> wait for RMS above the adaptive threshold; keep a
+                          3-chunk pre-roll so the word's quiet onset survives.
+          "recording"  -> accumulate until 0.56 s of trailing silence (or the
+                          4.8 s cap); early-exit when the model is >= 0.95
+                          sure after 0.16 s of silence.
+        """
+        rec = None
+        levels: "collections.deque[float]" = collections.deque(
+            maxlen=NOISE_HISTORY_CHUNKS)
+        while True:
+            chunk = q.get()
+            if chunk is None:
+                break
+
+            # Feed the wake gate every chunk, even while recording a command:
+            # openWakeWord's reset() only clears scores, not its audio
+            # features, so a starved detector would still "hear" the last
+            # "hey mycroft" later.
+            woke = gate.process(chunk) if gate is not None else False
+            f = chunk.astype(np.float32) / 32768.0
+            rms = _rms(f)
+
+            if rec is None:
+                if woke:
+                    nrms = (float(np.percentile(levels, NOISE_PERCENTILE))
+                            if levels else 0.0)
+                    rec = {"phase": "tail", "tail": 0,
+                           "tail_chunks": WAKE_TAIL_CHUNKS,
+                           "buf": [], "silent": 0,
+                           "preroll": collections.deque(maxlen=PREROLL_CHUNKS),
+                           "t0": time.monotonic(),
+                           "threshold": min(MAX_SPEECH_THRESHOLD,
+                                            max(MIN_SPEECH_RMS,
+                                                SPEECH_OVER_NOISE * nrms))}
+                    emit({"type": "wake"})
+                    print(f"  [wake] noise rms={nrms:.4f} "
+                          f"threshold={rec['threshold']:.4f} "
+                          f"deaf {WAKE_TAIL_CHUNKS * WW_CHUNK / SR:.2f}s",
+                          flush=True)
+                else:
+                    levels.append(rms)
+                continue
+
+            if rec["phase"] == "tail":
+                rec["tail"] += 1
+                if rec["tail"] >= rec["tail_chunks"]:
+                    rec["phase"] = "wait_speech"
+                continue
+
+            if rec["phase"] == "wait_speech":
+                if rms > rec["threshold"]:
+                    rec["phase"] = "recording"
+                    rec["buf"] = [*rec["preroll"], f]  # keep the quiet onset
+                elif time.monotonic() - rec["t0"] > NO_SPEECH_TIMEOUT_S:
+                    rec = None
+                    if gate is not None:
+                        gate.reset()
+                    emit({"type": "idle"})
+                else:
+                    rec["preroll"].append(f)
+                continue
+
+            # phase == "recording"
+            rec["buf"].append(f)
+            rec["silent"] = rec["silent"] + 1 if rms < rec["threshold"] else 0
+            final = (rec["silent"] >= END_SILENCE_CHUNKS
+                     or len(rec["buf"]) >= MAX_COMMAND_CHUNKS)
+            if not final and rec["silent"] >= EARLY_EXIT_SILENCE_CHUNKS:
+                y = np.concatenate(rec["buf"])
+                res = _classify(y, SR)
+                if res["confidence"] >= EARLY_EXIT_PROB:
+                    final = True
+            if not final:
+                continue
+
+            y = np.concatenate(rec["buf"])
+            waited_ms = rec["silent"] * WW_CHUNK / SR * 1000.0
+            rec = None
+            if gate is not None:
+                gate.reset()
+            print(f"  [cmd] {len(y) / SR:.2f}s of audio, "
+                  f"{waited_ms:.0f} ms of silence", flush=True)
+            # Runs in the worker thread (already off the event loop), so no
+            # asyncio needed here.
+            emit(_finish_command(y))
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+    async def sender():
+        while (ev := await evq.get()) is not None:
+            if websocket.client_state.name == "DISCONNECTED":
+                break
+            await websocket.send_text(json.dumps(ev))
+
+    sender_task = asyncio.create_task(sender())
+    print(f"[vcm-web] client connected: {websocket.client}", flush=True)
+
+    # The browser sends 80 ms chunks, but re-chunk anyway: the wake word
+    # needs exactly WW_CHUNK samples per call.
+    pending = np.zeros(0, dtype=np.int16)
 
     try:
         while True:
-            raw = await websocket.receive_text()
-            msg = json.loads(raw)
-            kind = msg.get("type")
-
-            if kind == "start":
-                wake_buf.clear(); cmd_buf.clear()
-                phase = "idle"; primed = False
-                ww_reset_buffers()
-                await websocket.send_text(json.dumps({"type": "ready",
-                                                      "wake": WW_DETECTOR is not None}))
-
-            elif kind == "audio":
-                pcm = np.frombuffer(base64.b64decode(msg["data"]),
-                                    dtype=np.int16).astype(np.float32) / 32768.0
-                if phase == "idle":
-                    # prime the wake-word buffers with the first ~6.4 s of audio
-                    if not primed:
-                        wake_buf.append(pcm)
-                        if sum(len(b) for b in wake_buf) >= WW_PRIMING * WW_CHUNK:
-                            for b in wake_buf:
-                                for i in range(0, len(b) - WW_CHUNK + 1, WW_CHUNK):
-                                    WW_DETECTOR.detect(b[i:i + WW_CHUNK])
-                            wake_buf.clear()
-                            primed = True
-                        continue
-                    if _feed_wake(pcm):
-                        # ---- wake word heard: start capturing the command ----
-                        phase = "recording"
-                        cmd_buf.clear()
-                        await websocket.send_text(json.dumps({"type": "wake"}))
-                elif phase == "recording":
-                    cmd_buf.append(pcm)
-                    # auto-stop after ~1.2 s of command audio
-                    if sum(len(b) for b in cmd_buf) >= int(SR * 1.2):
-                        phase = "busy"
-                        y = np.concatenate(cmd_buf) if cmd_buf else np.zeros(SR, dtype=np.float32)
-                        cmd_buf.clear()
-                        payload = await asyncio.to_thread(_finish_command, y)
-                        await websocket.send_text(json.dumps(payload))
-                        ww_reset_buffers()
-                        phase = "idle"
-
-            elif kind == "stop":
-                # manual stop (tap-to-talk fallback / dev)
-                if phase == "recording" or (cmd_buf):
-                    phase = "busy"
-                    y = np.concatenate(cmd_buf) if cmd_buf else np.zeros(SR, dtype=np.float32)
-                    cmd_buf.clear()
-                    payload = await asyncio.to_thread(_finish_command, y)
-                    await websocket.send_text(json.dumps(payload))
-                    ww_reset_buffers()
-                    phase = "idle"
-
-            elif kind == "state":
-                await websocket.send_text(json.dumps({"type": "state",
-                                                      "state": STATE.to_dict()}))
-
-            elif kind == "ping":
-                await websocket.send_text(json.dumps({"type": "pong"}))
+            raw = await websocket.receive()
+            if raw.get("type") == "websocket.disconnect":
+                break
+            if "bytes" in raw and raw["bytes"] is not None:
+                data = raw["bytes"]
+                if len(data) % 2:
+                    data = data[:-1]
+                if not data:
+                    continue
+                pending = np.concatenate(
+                    [pending, np.frombuffer(data, dtype=np.int16)])
+                n = len(pending) // WW_CHUNK * WW_CHUNK
+                for i in range(0, n, WW_CHUNK):
+                    q.put(pending[i:i + WW_CHUNK])
+                pending = pending[n:]
+            elif "text" in raw and raw["text"] is not None:
+                try:
+                    msg = json.loads(raw["text"])
+                except json.JSONDecodeError:
+                    continue
+                kind = msg.get("type")
+                if kind == "start":
+                    if gate is not None:
+                        gate.reset()
+                    await websocket.send_text(json.dumps(
+                        {"type": "ready", "wake": gate is not None}))
+                elif kind == "state":
+                    await websocket.send_text(json.dumps(
+                        {"type": "state", "state": globals()["STATE"].to_dict()}))
+                elif kind == "ping":
+                    await websocket.send_text(json.dumps({"type": "pong"}))
+                elif kind == "reset":
+                    globals()["STATE"] = SmartHomeState()
+                    await websocket.send_text(json.dumps(
+                        {"type": "state",
+                         "state": globals()["STATE"].to_dict()}))
     except WebSocketDisconnect:
         pass
+    finally:
+        q.put(None)
+        t.join(2.0)
+        emit(None)
+        sender_task.cancel()
+        print(f"[vcm-web] client disconnected: {websocket.client}", flush=True)
 
 
 def main():

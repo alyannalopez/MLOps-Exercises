@@ -327,44 +327,110 @@ function chimeWake(){ tone(880,0,0.16,0.24); tone(1318.5,0.12,0.22,0.24); }
 // chime #2 — command understood: soft descending "done"
 function chimeDone(){ tone(659.3,0,0.16,0.20); tone(440,0.13,0.26,0.20); }
 
+let wsRetryMs = 1000, wsRetryTimer = null, wsWasUp = false;
 function connect(){
+  clearTimeout(wsRetryTimer);
   const proto = location.protocol==='https:'?'wss':'ws';
   ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.binaryType = 'arraybuffer';   // audio goes out as raw PCM bytes
   ws.onopen = ()=>{ $('conn').classList.add('live'); $('connTxt').textContent='connected';
-                     ws.send(JSON.stringify({type:'start'})); };
+                     ws.send(JSON.stringify({type:'start'}));
+                     if(wsWasUp){ /* silent reconnect */ }
+                     wsWasUp = true; wsRetryMs = 1000; };
   ws.onclose = ()=>{ $('conn').classList.remove('live'); $('connTxt').textContent='disconnected';
-                      setTimeout(connect,1500); };
+                      wsRetryMs = Math.min(wsRetryMs*2, 10000);
+                      wsRetryTimer = setTimeout(connect, wsRetryMs); };
   ws.onmessage = ev=>{
-    const m=JSON.parse(ev.data);
+    if(typeof ev.data !== 'string') return;
+    let m; try{ m=JSON.parse(ev.data); }catch{ return; }
     if(m.type==='ready'){
       wakeEnabled = !!m.wake;
       setPhase('idle');
       startListen();
     }
     if(m.type==='wake'){ onWake(); }
+    if(m.type==='idle'){ setPhase('idle'); }
     if(m.type==='result'){ onResult(m); }
     if(m.type==='state'){ renderTiles(m.state, null, {silent:true}); }
   };
 }
 
-/* ── continuous mic: always on, feeding the wake word ───────────── */
+/* ── continuous mic: always on, feeding the wake word ───────────────── */
+/* tiny-alexa capture: the AudioContext is created AT 16 kHz so the worklet
+   hands us 16 kHz blocks directly (most browsers honour the requested rate);
+   when one doesn't, onMicBlock resamples with linear interpolation whose
+   phase carries across blocks — resampling each block on its own would put
+   a click at every block boundary. Samples are packed into exactly-80 ms
+   int16 chunks (1280 samples, openWakeWord's native frame) and sent as RAW
+   BINARY WebSocket frames — no base64, no JSON envelope. */
+const CHUNK = 1280;                       // 80 ms at 16 kHz
+let pcmFill = 0, rsPos = 0, rsPrev = 0;
+const pcmOut = new Int16Array(CHUNK);     // one 80 ms chunk being filled
+
+function pushSample(x){
+  const s = Math.max(-1, Math.min(1, x));
+  pcmOut[pcmFill++] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  if(pcmFill === CHUNK){
+    pcmFill = 0;
+    if(ws && ws.readyState === 1) ws.send(pcmOut);  // send() copies the bytes
+  }
+}
+function onMicBlock(input, inRate){
+  if(inRate === SR){ for(let i=0;i<input.length;i++) pushSample(input[i]); return; }
+  const step = inRate / SR;
+  for(; rsPos < input.length; rsPos += step){
+    const i0 = rsPos | 0, f = rsPos - i0;
+    const a = i0 === 0 ? rsPrev : input[i0-1], b = input[i0];
+    pushSample(a + (b - a) * f);
+  }
+  rsPos -= input.length;
+  rsPrev = input[input.length-1];
+}
+function micErrorMessage(err){
+  if(!window.isSecureContext || !navigator.mediaDevices)
+    return 'the browser only allows the mic on https:// or http://localhost — open this page on the Pi itself, or via an https proxy';
+  switch(err && err.name){
+    case 'NotAllowedError': case 'SecurityError':
+      return 'microphone permission was blocked — allow it in the address bar, then tap the orb to retry';
+    case 'NotFoundError': case 'OverconstrainedError':
+      return 'no microphone found — plug one in, then tap the orb to retry';
+    case 'NotReadableError': case 'AbortError':
+      return 'the microphone is busy in another app — close it, then tap the orb to retry';
+  }
+  return 'microphone unavailable: ' + ((err && err.message) || err);
+}
 async function startListen(){
   if(recording) return;
-  try{ stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:true, noiseSuppression:true}}); }
-  catch(e){ alert('Microphone access denied. Allow mic permission and reload.'); return; }
-  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert(micErrorMessage(new Error('insecure context'))); return;
+  }
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio:{echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:1}
+    });
+  }catch(e){ alert(micErrorMessage(e)); return; }
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)({sampleRate: SR});
+  if(audioCtx.state === 'suspended') await audioCtx.resume();
   const nativeRate = audioCtx.sampleRate;
-  await audioCtx.audioWorklet.addModule('/static/pcm-capture.js', {credentials:'omit'});
-  const src = audioCtx.createMediaStreamSource(stream);
-  workletRef = new AudioWorkletNode(audioCtx, 'pcm-capture');
-  workletRef.port.onmessage = (e)=>{
-    const resampled = resampleLinear(e.data, nativeRate, SR);
-    const pcm16 = new Int16Array(resampled.length);
-    for(let i=0;i<resampled.length;i++){ let v=Math.max(-1,Math.min(1,resampled[i])); pcm16[i]=v<0?v*0x8000:v*0x7FFF; }
-    if(ws && ws.readyState===1) ws.send(JSON.stringify({type:'audio', data: b64(pcm16.buffer)}));
-  };
-  analyser = audioCtx.createAnalyser(); analyser.fftSize=1024;
-  src.connect(workletRef); src.connect(analyser);
+  try{
+    await audioCtx.audioWorklet.addModule('/static/pcm-capture.js', {credentials:'omit'});
+    const src = audioCtx.createMediaStreamSource(stream);
+    workletRef = new AudioWorkletNode(audioCtx, 'pcm-capture');
+    workletRef.port.onmessage = (e)=> onMicBlock(e.data, nativeRate);
+    analyser = audioCtx.createAnalyser(); analyser.fftSize=1024;
+    src.connect(workletRef); src.connect(analyser);
+  }catch(e){
+    // ScriptProcessor fallback (older browsers without AudioWorklet)
+    console.warn('AudioWorklet unavailable, falling back to ScriptProcessor:', e);
+    const src = audioCtx.createMediaStreamSource(stream);
+    const sp = audioCtx.createScriptProcessor(1024, 1, 1);
+    sp.onaudioprocess = (e)=> onMicBlock(e.inputBuffer.getChannelData(0), nativeRate);
+    src.connect(sp); sp.connect(audioCtx.destination);
+    workletRef = sp;
+    analyser = audioCtx.createAnalyser(); analyser.fftSize=1024;
+    src.connect(analyser);
+  }
   recording=true;
   startLevelLoop();
 }

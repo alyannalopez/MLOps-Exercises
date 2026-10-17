@@ -43,3 +43,6 @@ pi_bundle/**/*.py[cod]
 
 # --- venv ---
 .venv/
+
+# --- Nested vcm-benchmark repo (has its own remote: airimonda/vcm-benchmark) ---
+vcm-benchmark/
