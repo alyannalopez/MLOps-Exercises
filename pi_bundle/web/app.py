@@ -22,7 +22,7 @@ Run:
   python3 web/app.py --model conformer_s_int8.onnx
 """
 from __future__ import annotations
-import argparse, asyncio, base64, json, random, shutil, subprocess, threading, time, webbrowser
+import argparse, asyncio, base64, json, os, random, shutil, subprocess, sys, threading, time, webbrowser
 from pathlib import Path
 from dataclasses import dataclass, field
 
@@ -36,6 +36,12 @@ BUNDLE = HERE.parent
 MODEL_DIR = BUNDLE / "models"
 STATIC = HERE / "static"
 MUSIC_DIR = BUNDLE / "assets" / "music"
+
+# Project root (ME2/) holds runtime/ + vcm/. Add it so we can reuse the SAME
+# wake-word detector the terminal demo uses (runtime/wakeword.py).
+PROJECT_ROOT = BUNDLE.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # ── constants (must match vcm/features.py + vcm_runtime.py) ────────────────
 SR = 16000
@@ -237,54 +243,56 @@ def load_session(model_name: str):
 
 
 # ── wake word (openWakeWord "hey mycroft") ─────────────────────────────────
-WW_MODEL = None
-WW_THRESHOLD = 0.75
+# Reuse the EXACT detector the terminal demo runs (runtime/wakeword.py). It
+# resolves the pretrained model across openwakeword 0.4.0 / 0.6.x layouts —
+# the old inline loader crashed on the installed version, so the web app
+# silently fell back to tap-to-talk (no wake word).
+WW_DETECTOR = None
 WW_CHUNK = 1280          # 80 ms @ 16 kHz (openWakeWord native frame size)
 WW_PRIMING = 80          # 6.4 s of silence to prime the internal buffers
 WW_MIN_GAP = 1.2         # ignore re-triggers within this many seconds
+WW_THRESHOLD = 0.5       # same as the terminal demo (runtime/main.py --ww-threshold)
 
 
 def load_wakeword():
-    """Load the pretrained 'hey mycroft' openWakeWord model. Returns the model
-    or None if unavailable (server then falls back to tap-to-talk)."""
-    global WW_MODEL
-    if WW_MODEL is not None:
-        return WW_MODEL
+    """Load the pretrained 'hey mycroft' wake-word detector (same as terminal).
+    Returns the detector or None if unavailable (server then falls back to
+    tap-to-talk)."""
+    global WW_DETECTOR
+    if WW_DETECTOR is not None:
+        return WW_DETECTOR
     try:
-        from openwakeword.model import Model
-        from openwakeword.utils import download_models
-        try:
-            download_models(model_names=["hey_mycroft"])
-        except TypeError:
-            download_models(["hey_mycroft"])
-        except Exception as e:
-            print(f"[vcm-web] wake-word model download warning: {e}")
-        m = Model(wakeword_models=["hey_mycroft"], inference_framework="onnx")
-        m.predict(np.zeros(WW_CHUNK, dtype=np.float32))   # warm up
-        WW_MODEL = m
-        print("[vcm-web] wake word 'hey mycroft' ready (openWakeWord)")
-        return m
+        from runtime.wakeword import WakeWordDetector
+        det = WakeWordDetector(wakeword="hey_mycroft", threshold=WW_THRESHOLD)
+        det.detect(np.zeros(WW_CHUNK, dtype=np.float32))   # warm up
+        WW_DETECTOR = det
+        print(f"[vcm-web] wake word 'hey mycroft' ready (openWakeWord, "
+              f"thr={WW_THRESHOLD})", flush=True)
+        return det
     except Exception as e:
-        print(f"[vcm-web] wake word unavailable ({e}); tap-to-talk only")
+        print(f"[vcm-web] wake word unavailable ({e}); tap-to-talk only", flush=True)
         return None
 
 
 def ww_reset_buffers():
-    """Re-prime the model's internal buffers after a command so the wake word
+    """Reset the detector's internal buffers after a command so the wake word
     doesn't re-trigger on the tail of the spoken command."""
-    if WW_MODEL is None:
+    if WW_DETECTOR is None:
         return
     try:
-        for _ in range(WW_PRIMING):
-            WW_MODEL.predict(np.zeros(WW_CHUNK, dtype=np.float32))
+        WW_DETECTOR.reset()
     except Exception:
         pass
 
 
-# ── music playback (copyright-free demo tracks, brief task 8) ──────────────
+# ── music playback (real songs, brief task 8) ──────────────
 _MUSIC_TRACKS = [
-    "track1_relaxing", "track2_upbeat", "track3_lofi",
-    "track4_demo_song", "track5_alarm",
+    "track1_relaxing",   # Isang Daan – Cup of Joe
+    "track2_upbeat",     # Kung Payagan – Cup of Joe
+    "track3_lofi",       # Lalayo – Cup of Joe
+    "track4_demo_song",  # Pamahiin – Cup of Joe
+    "track5_alarm",      # Sandali – Cup of Joe
+    "na_para_bang",      # Na Para Bang – Mariah Deborah
 ]
 _PLAYER: subprocess.Popen | None = None
 
@@ -497,9 +505,10 @@ WAKE_ENABLED = True
 async def startup():
     global SESSION, IN_NAME
     SESSION, IN_NAME = load_session(MODEL_NAME)
-    print(f"[vcm-web] loaded model: {MODEL_NAME}")
+    print(f"[vcm-web] loaded model: {MODEL_NAME}", flush=True)
     if WAKE_ENABLED:
         await asyncio.to_thread(load_wakeword)
+    print(f"[vcm-web] wake word ready: {WW_DETECTOR is not None}", flush=True)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -566,15 +575,16 @@ async def ws(websocket: WebSocket):
     primed = False
 
     def _feed_wake(pcm: np.ndarray):
-        """Feed 16 kHz float samples to openWakeWord; returns True on trigger."""
+        """Feed 16 kHz float samples to the wake-word detector; True on trigger.
+        Same detector + threshold as the terminal demo."""
         nonlocal last_trigger
-        if WW_MODEL is None:
+        if WW_DETECTOR is None:
             return False
         triggered = False
         for i in range(0, len(pcm) - WW_CHUNK + 1, WW_CHUNK):
             chunk = pcm[i:i + WW_CHUNK]
-            scores = WW_MODEL.predict(chunk)
-            if any(v > WW_THRESHOLD for v in scores.values()):
+            ev = WW_DETECTOR.detect(chunk)
+            if ev.triggered:
                 if time.time() - last_trigger > WW_MIN_GAP:
                     last_trigger = time.time()
                     triggered = True
@@ -604,7 +614,7 @@ async def ws(websocket: WebSocket):
                 phase = "idle"; primed = False
                 ww_reset_buffers()
                 await websocket.send_text(json.dumps({"type": "ready",
-                                                      "wake": WW_MODEL is not None}))
+                                                      "wake": WW_DETECTOR is not None}))
 
             elif kind == "audio":
                 pcm = np.frombuffer(base64.b64decode(msg["data"]),
@@ -616,7 +626,7 @@ async def ws(websocket: WebSocket):
                         if sum(len(b) for b in wake_buf) >= WW_PRIMING * WW_CHUNK:
                             for b in wake_buf:
                                 for i in range(0, len(b) - WW_CHUNK + 1, WW_CHUNK):
-                                    WW_MODEL.predict(b[i:i + WW_CHUNK])
+                                    WW_DETECTOR.detect(b[i:i + WW_CHUNK])
                             wake_buf.clear()
                             primed = True
                         continue
@@ -675,7 +685,7 @@ def main():
     url = f"http://{args.host}:{args.port}"
     if not args.no_browser:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
-    print(f"[vcm-web] opening {url}  (model: {args.model})")
+    print(f"[vcm-web] opening {url}  (model: {args.model})", flush=True)
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 

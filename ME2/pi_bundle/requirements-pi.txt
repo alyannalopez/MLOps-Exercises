@@ -1,9 +1,0 @@
-# ME2 VCM runtime — Raspberry Pi 4/5 dependencies (armv7l / aarch64)
-# Python 3.11+ recommended (Raspberry Pi OS Bookworm ships 3.11).
-# All CPU-only; no GPU, no network required at runtime.
-
-numpy>=1.26,<3
-onnxruntime>=1.17          # CPUExecutionProvider only
-openwakeword==0.4.0        # pretrained "hey_mycroft" wake word (ONNX, Apache-2.0)
-soundfile>=0.12
-sounddevice>=0.4.6         # mic capture (needs PortAudio: sudo apt install libportaudio2)

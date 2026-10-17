@@ -60,7 +60,7 @@ calls/messages (simulated)
 
 ## Hardware notes (RPi 4 / 5)
 
-- CPU-only ONNX Runtime; the classifier is 246,055 params (~490K FLOPs per
+- CPU-only ONNX Runtime; the classifier is 244,820 params (~490K FLOPs per
   1 s clip). Measured on Apple Silicon M-series: 0.67 ms per clip end-to-end.
   On a Pi 4 (4x Cortex-A72 @ 1.5 GHz) expect roughly 10–50x slower per-clip
   inference (order of tens of ms) — still far below real time. **Measure on
