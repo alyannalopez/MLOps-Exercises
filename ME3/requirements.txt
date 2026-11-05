@@ -1,0 +1,39 @@
+# voiceduplex — Step 3 (VAD + ASR) dependencies.
+# Pin these on BOTH Mac and Pi so the port is reproducible.
+#
+# NOTE for Pi (aarch64): onnxruntime + webrtcvad both have ARM64 wheels.
+# If webrtcvad won't build on the Pi, drop it — Silero is the primary engine
+# and webrtc is only the backup.
+
+numpy>=1.26
+onnxruntime>=1.17          # Silero VAD backend (primary)
+webrtcvad>=2.0.10          # backup VAD engine (optional on Pi)
+setuptools<81              # webrtcvad 2.0.10 imports pkg_resources (gone in 3.12+)
+sounddevice>=0.4.6         # mic capture / speaker playback (CoreAudio / ALSA)
+PyYAML>=6.0                # config loading
+
+# --- ASR (Step 3) ---
+# whisper.cpp is a NATIVE binary, not a pip package:
+#   Mac : brew install whisper-cpp
+#   Pi  : build from source (cmake) for aarch64, OR use a prebuilt wheel.
+# The Python side only shells out to `whisper-cli`; no pip dep required here.
+# Model weights download separately: ./scripts/download_model.sh base.en
+
+# --- TTS (Step 4) ---
+# Piper (BACKUP): in-process in the MAIN env. New piper1-gpl bundles its own
+# espeak-ng data, so no external espeak binary is needed.
+piper-tts>=1.8             # OHF-voice/piper1-gpl (class: piper.voice.PiperVoice)
+soundfile>=0.12            # WAV I/O in the TTS test harness
+#
+# Kokoro (PRIMARY): CANNOT install into the main 3.14 env (kokoro-onnx caps
+# Python <3.14). It lives in a SEPARATE 3.12 venv that the pipeline shells out
+# to (see tts.kokoro_python in config). Set it up once:
+#   python3.12 -m venv .venv-kokoro
+#   .venv-kokoro/bin/python -m pip install -U pip kokoro-onnx soundfile numpy
+#   # then download the models (see scripts/download_kokoro.sh):
+#   #   models/kokoro-v1.0.onnx  +  models/voices-v1.0.bin
+# On the Pi: recreate .venv-kokoro with the Pi's python3.12 (aarch64 wheels for
+# onnxruntime exist), copy the two model files, and set tts.kokoro_python.
+
+# --- used only by the test-harness scripts, not the runtime pipeline ---
+scipy>=1.11                # resampling in test fixtures
