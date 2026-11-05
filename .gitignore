@@ -1,0 +1,34 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- Virtual environments (regenerable; see requirements.txt) ---
+.venv-kokoro/
+.venv/
+venv/
+
+# --- Downloadable model weights (see scripts/download_model.sh + setup_kokoro.sh) ---
+# ~1.1 GB total. Not committed; re-download on a fresh clone.
+models/
+src/voiceduplex/vad/models/silero_vad.onnx
+data/voices/*.onnx
+
+# --- Generated runtime artifacts ---
+data/timeline.jsonl
+data/timeline_probe.jsonl
+data/probe_out.txt
+data/probe_err.txt
+data/audio/*.wav
+
+# --- macOS ---
+.DS_Store
+
+# --- OnIt Step 8 scratch + isolated venv ---
+onit/onit_work/
+onit-venv/
+
+# --- Secrets (never commit keys) ---
+*.env
+.env.*

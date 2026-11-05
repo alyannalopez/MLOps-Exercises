@@ -1,0 +1,88 @@
+# voiceduplex configuration — the ONLY knobs you retune when moving Mac -> Pi.
+# Edit values here; no code changes needed for device/threshold tweaks.
+
+audio:
+  backend: mac            # mac | pi  (auto-detected if omitted)
+  sample_rate: 16000
+  block: 512              # 32 ms frames
+  input_device: "MacBook Air Microphone"   # Pin the built-in mic (Step 5 behaviour).
+                           #   "default" = follow the OS input (menu-bar selection)
+                           #   instead. On the Pi this field is ignored — the Pi
+                           #   backend always uses the system default (whatever
+                           #   ALSA/PulseAudio exposes), so no config change is
+                           #   needed when you move to RPi.
+  output_device: default  # "default" = follow the OS output (speakers OR Bluetooth
+                          #   headset, whichever you select in the menu bar).
+                          #   Pin a name (e.g. "MacBook Air Speakers") to force one.
+  playback_rate: 48000    # resample TTS up to this before playing. 48k is the rate
+                          #   Bluetooth A2DP headsets negotiate; 16k can drop on BT.
+
+vad:
+  engine: silero          # silero (primary) | webrtc (backup)
+  threshold: 0.5          # speech-likelihood cutoff
+  min_speech_frames: 4    # ~128 ms of voiced frames before "speech_start"
+  min_silence_frames: 12  # ~384 ms of quiet before "speech_end"
+  webrtc_aggressiveness: 2  # 0..3, only used when engine: webrtc
+
+asr:
+  backend: whispercpp     # whispercpp (local/free/offline, Mac + Pi)
+  model: models/ggml-base.en.bin   # relative to project root; see scripts/download_model.sh
+  binary: whisper-cli     # Homebrew on Mac; built-for-aarch64 on Pi
+  language: en
+  threads: 0              # 0 = let whisper use all cores
+  beam_size: 5            # higher = more accurate, slower (0 = greedy/fastest)
+
+tts:
+  backend: kokoro          # kokoro (primary, natural) | piper (backup, faster/lighter)
+  voice: af_heart          # Kokoro voice id; run get_voices() for the full list
+                           #   female: af_heart af_sarah af_nicole af_bella af_aoede
+                           #   male  : am_adam am_michael am_fenrir am_echo
+  speed: 1.0               # 1.0 = normal; >1 = faster
+  # --- Kokoro (runs in an ISOLATED 3.12 venv; kokoro-onnx caps Python <3.14) ---
+  kokoro_python: .venv-kokoro/bin/python     # relative to project root
+  kokoro_model: models/kokoro-v1.0.onnx
+  kokoro_voices: models/voices-v1.0.bin
+  # --- Piper (in-process; voice IS the model file) ---
+  piper_model: data/voices/en_US-lessac-medium.onnx
+  # piper_config: data/voices/en_US-lessac-medium.onnx.json   # auto-derived if omitted
+
+# Step 5 — half-duplex loop
+agent:
+  max_utterance_sec: 15   # hard cap on one user turn before forced speech_end
+  timeline_log: data/timeline.jsonl   # one JSON line per turn (T0..T8) — Step 9 reads this
+  # route table is deterministic/offline (src/voiceduplex/loop/brain.py):
+  #   backchannel -> brief ack | delegate -> stub (Step 8)
+  #   quick_tool  -> the ME2 top-10 (Step 7): music, time/date/weather, lights,
+  #                  dim/color, timer, alarm, thermostat, media, reminders,
+  #                  calls/messages (+ math, echo). State lives in
+  #                  src/voiceduplex/smarthome/device.py (SimulatedSmartHome).
+
+# Step 6 — full-duplex (barge-in + backchannel-vs-interrupt)
+duplex:
+  enabled: true
+  barge_in: true                 # allow the user to interrupt mid-reply
+  barge_min_energy: 150.0        # RMS floor for a real interrupt (ignores faint
+                                 #   mic-leak / coughs during playback)
+  backchannel_during_speech: true  # "yeah"/"mm-hm" while we talk -> ack + resume
+                                   #   (false = treat every overlap as an interrupt)
+  play_chunk_sec: 0.15           # playback slice size; worst-case barge-in
+                                 #   reaction time ≈ one chunk (lower = snappier,
+                                 #   more syscalls)
+
+# Step 8 — delegation to a bigger agent harness (black box).
+# Anything that isn't a backchannel or a quick-tool intent ("make a webpage
+# about X", "write me a report") is handed here. ME3 measures turnaround /
+# keep-alive / result-back — never the harness internals.
+delegate:
+  backend: onit          # onit | stub   (stub = offline canned reply, no network)
+  mode: persistent       # persistent (default: one warm worker) | oneshot (subprocess/task)
+  python: /Users/yannamii/sandbox/onit-venv/bin/python   # OnIt venv interpreter
+  worker: /Users/yannamii/sandbox/ME3/onit/onit_worker.py  # persistent worker daemon
+  # runner: /Users/yannamii/sandbox/ME3/onit/run_onit_task.sh  # one-shot (only if mode: oneshot)
+  # Endpoint/model are supplied via the environment (never in this file):
+  #   export ONIT_HOST=http://<host>:<port>/v1   [ONIT_HOST2, ONIT_MODEL, ONIT_DATA_PATH]
+  wait_sec: 120          # max seconds to wait for a result before apologising
+  boot_timeout: 120      # max seconds to wait for the worker to come up on first use
+  # workdir: /Users/yannamii/sandbox   # where OnIt runs tasks (defaults to sandbox)
+
+# (later steps) agent:, bench: blocks added in Steps 5-9
