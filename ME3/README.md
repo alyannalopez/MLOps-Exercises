@@ -88,7 +88,9 @@ python3.12 -m venv .venv-kokoro
 
 ## Testing & running (the four entrypoints)
 
-All commands run from the repo root. `PYTHONPATH=src` puts the `voiceduplex`
+All commands run from the **ME3 project root** (the `ME3/` folder that holds
+`config/`, `src/`, `onit/`, `scripts/`, `web/`). `cd ME3` from the repo root
+first. `PYTHONPATH=src` puts the `voiceduplex`
 package on the path. Pick the interpreter that has the deps — on this Mac that's
 the conda base python (`/opt/miniconda3/bin/python3`); a plain `python3` works in
 an interactive shell but a background launcher may pick a different one.
@@ -192,12 +194,17 @@ delegate:
   primary: pipecat         # first harness to try
   backup: onit             # second harness, used when primary fails
   mode: persistent         # persistent | oneshot
-  python: /path/to/onit-venv/bin/python
-  worker: /path/to/onit_worker.py
-  pipecat_worker: /path/to/pipecat_worker.py
+  python: /abs/path/onit-venv/bin/python   # ABSOLUTE: the venv lives OUTSIDE the repo
+  worker: onit/onit_worker.py              # relative to the ME3 project root
+  pipecat_worker: onit/pipecat_worker.py   # relative to the ME3 project root
   wait_sec: 120
   boot_timeout: 120
 ```
+
+> **Where the venv lives:** the isolated `onit-venv` (3.12, holds both OnIt and
+> Pipecat) is created **outside** the repo — one level above the `ME3/` folder
+> (e.g. `../onit-venv`), so it is never committed. `python:` therefore uses an
+> absolute path; the worker scripts are relative and travel with the folder.
 
 > **Security note:** endpoint URLs and keys are supplied via the environment
 > (`ONIT_HOST`, `PIPECAT_HOST`, `OPENAI_API_KEY`), **never** in this repo. The

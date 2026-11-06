@@ -93,11 +93,16 @@ delegate:
   primary: pipecat       # first harness to try (fast; OnIt is slow on this machine)
   backup: onit           # second harness, used when primary fails
   mode: persistent       # persistent (default: one warm worker) | oneshot (subprocess/task)
-  python: /Users/yannamii/sandbox/onit-venv/bin/python   # OnIt venv interpreter
-  worker: /Users/yannamii/sandbox/ME3/onit/onit_worker.py  # OnIt persistent worker daemon
-  # runner: /Users/yannamii/sandbox/ME3/onit/run_onit_task.sh  # one-shot (only if mode: oneshot)
+  # Paths below are relative to the ME3 project root (the folder holding
+  # config/, src/, onit/, ...) unless absolute. The OnIt/Pipecat venv lives
+  # OUTSIDE the repo (isolated, untracked), so `python:` is absolute; the
+  # worker scripts live inside the repo, so they are relative and travel with
+  # the folder (Mac -> Pi, repo root -> ME3/ subfolder).
+  python: /Users/yannamii/sandbox/onit-venv/bin/python   # OnIt venv interpreter (outside repo)
+  worker: onit/onit_worker.py                            # OnIt persistent worker daemon
+  # runner: onit/run_onit_task.sh                        # one-shot (only if mode: oneshot)
   # --- Pipecat backup harness (used when backend=fallback and primary fails) ---
-  pipecat_worker: /Users/yannamii/sandbox/ME3/onit/pipecat_worker.py
+  pipecat_worker: onit/pipecat_worker.py
   # pipecat_python: /Users/yannamii/sandbox/onit-venv/bin/python   # reuse OnIt venv unless set
   # Endpoint/model are supplied via the environment (never in this file):
   #   export ONIT_HOST=http://<host>:<port>/v1        [ONIT_HOST2, ONIT_MODEL, ONIT_DATA_PATH]

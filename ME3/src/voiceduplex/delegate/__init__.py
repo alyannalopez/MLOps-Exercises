@@ -374,22 +374,38 @@ class FallbackDelegateBackend(DelegateBackend):
                     pass
 
 
+def _resolve(root: Path, val, default_rel: str, default_base: Optional[Path] = None) -> str:
+    """Resolve a config path against the ME3 project root.
+
+    Absolute paths pass through unchanged; relative paths are anchored to the
+    project root (``root``). When the config omits the value entirely, the
+    default is built from ``default_base`` (the project root by default, but
+    the venv lives one level up in ``sandbox`` — pass that for the interpreter).
+    Keeps the config portable across machines and folder layouts (Mac -> Pi,
+    repo root -> ME3/ subfolder).
+    """
+    if not val:
+        return str((default_base or root) / default_rel)
+    p = Path(val)
+    return str(p if p.is_absolute() else root / p)
+
+
 def _build_onit(d: dict) -> DelegateBackend:
     """Build the OnIt backend from the ``delegate`` config block."""
-    root = Path(__file__).resolve().parents[3]  # .../ME3
-    sandbox = root.parent  # .../sandbox
+    root = Path(__file__).resolve().parents[3]  # ME3 project root (config/, src/, onit/)
+    sandbox = root.parent  # parent of the project root (holds the isolated onit-venv)
     # Default to the PERSISTENT worker (boots OnIt once, stays warm). Set
     # delegate.mode: oneshot to fall back to the per-task subprocess.
     mode = (d.get("mode") or "persistent").lower()
     if mode == "persistent":
         return PersistentOnItBackend(
-            python=d.get("python") or str(sandbox / "onit-venv" / "bin" / "python"),
-            worker_script=d.get("worker") or str(sandbox / "onit" / "onit_worker.py"),
+            python=_resolve(root, d.get("python"), "onit-venv/bin/python", default_base=sandbox),
+            worker_script=_resolve(root, d.get("worker"), "onit/onit_worker.py"),
             timeout=float(d.get("timeout", 120.0)),
             boot_timeout=float(d.get("boot_timeout", 120.0)),
             workdir=d.get("workdir") or None,
         )
-    runner = d.get("runner") or str(sandbox / "onit" / "run_onit_task.sh")
+    runner = _resolve(root, d.get("runner"), "onit/run_onit_task.sh")
     return OnItBackend(
         runner,
         timeout=float(d.get("timeout", 120.0)),
@@ -406,8 +422,8 @@ def _build_pipecat(d: dict) -> DelegateBackend:
     PIPECAT_MODEL, OPENAI_API_KEY) are forwarded from the config block so no
     secrets live in code.
     """
-    root = Path(__file__).resolve().parents[3]  # .../ME3
-    sandbox = root.parent  # .../sandbox
+    root = Path(__file__).resolve().parents[3]  # ME3 project root (config/, src/, onit/)
+    sandbox = root.parent  # parent of the project root (holds the isolated onit-venv)
     env_extra = {}
     if d.get("pipecat_host"):
         env_extra["PIPECAT_HOST"] = d["pipecat_host"]
@@ -416,8 +432,8 @@ def _build_pipecat(d: dict) -> DelegateBackend:
     if d.get("openai_api_key"):
         env_extra["OPENAI_API_KEY"] = d["openai_api_key"]
     return PersistentOnItBackend(
-        python=d.get("pipecat_python") or d.get("python") or str(sandbox / "onit-venv" / "bin" / "python"),
-        worker_script=d.get("pipecat_worker") or str(sandbox / "onit" / "pipecat_worker.py"),
+        python=_resolve(root, d.get("pipecat_python") or d.get("python"), "onit-venv/bin/python", default_base=sandbox),
+        worker_script=_resolve(root, d.get("pipecat_worker"), "onit/pipecat_worker.py"),
         timeout=float(d.get("timeout", 120.0)),
         boot_timeout=float(d.get("boot_timeout", 120.0)),
         workdir=d.get("workdir") or None,

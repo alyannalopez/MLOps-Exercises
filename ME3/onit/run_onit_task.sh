@@ -17,7 +17,10 @@ cd "$(dirname "$0")"
 
 TASK="${1:?Usage: run_onit_task.sh \"<task>\"}"
 : "${ONIT_HOST:?ONIT_HOST is not set (e.g. http://<host>:<port>/v1)}"
-REPO_ROOT="$(cd .. && pwd)"
+# The isolated OnIt/Pipecat venv lives OUTSIDE the repo, two levels up from
+# this script (<sandbox>/onit-venv, where <sandbox> holds ME1/ ME2/ ME3/).
+# Override with ONIT_PYTHON if your layout differs.
+REPO_ROOT="$(cd ../.. && pwd)"
 ONIT_PYTHON="${ONIT_PYTHON:-$REPO_ROOT/onit-venv/bin/python}"
 
 export ONIT_HOST ONIT_HOST2 ONIT_MODEL ONIT_DATA_PATH
