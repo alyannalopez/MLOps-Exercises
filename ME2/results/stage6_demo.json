@@ -1,0 +1,331 @@
+{
+  "rows": [
+    {
+      "true": "PLAY_MUSIC",
+      "n_clips": 141,
+      "n_correct": 115,
+      "acc": 0.8156028368794326,
+      "best_clip_pred": "PLAY_MUSIC",
+      "best_clip_conf": 0.983066737651825,
+      "best_clip_lat_ms": 0.7548330031568184,
+      "phrase": "Play music",
+      "response": "Playing track3_lofi.",
+      "acted": true
+    },
+    {
+      "true": "WEATHER",
+      "n_clips": 141,
+      "n_correct": 116,
+      "acc": 0.8226950354609929,
+      "best_clip_pred": "WEATHER",
+      "best_clip_conf": 0.985501229763031,
+      "best_clip_lat_ms": 1.363541989121586,
+      "phrase": "weather",
+      "response": "Simulated weather for Metro Manila, Philippines: today is cloudy, high 30 degrees, low 23 degrees, wind 25 kilometers per hour. Sunday, Oct 18: light rain, 18 to 27 degrees. Monday, Oct 19: sunny, 16 to 26 degrees.",
+      "acted": true
+    },
+    {
+      "true": "TIME",
+      "n_clips": 141,
+      "n_correct": 112,
+      "acc": 0.7943262411347518,
+      "best_clip_pred": "TIME",
+      "best_clip_conf": 0.9856976270675659,
+      "best_clip_lat_ms": 1.126707997173071,
+      "phrase": "current time",
+      "response": "It's 3:56 AM.",
+      "acted": true
+    },
+    {
+      "true": "LIGHT_ON",
+      "n_clips": 141,
+      "n_correct": 116,
+      "acc": 0.8226950354609929,
+      "best_clip_pred": "LIGHT_ON",
+      "best_clip_conf": 0.9925758838653564,
+      "best_clip_lat_ms": 0.9252500021830201,
+      "phrase": "Lights on",
+      "response": "Turning the lights on.",
+      "acted": true
+    },
+    {
+      "true": "LIGHT_OFF",
+      "n_clips": 141,
+      "n_correct": 109,
+      "acc": 0.7730496453900709,
+      "best_clip_pred": "LIGHT_OFF",
+      "best_clip_conf": 0.9794335961341858,
+      "best_clip_lat_ms": 0.9792920027393848,
+      "phrase": "lights off",
+      "response": "Turning the lights off.",
+      "acted": true
+    },
+    {
+      "true": "PAUSE",
+      "n_clips": 141,
+      "n_correct": 131,
+      "acc": 0.9290780141843972,
+      "best_clip_pred": "PAUSE",
+      "best_clip_conf": 0.9796267151832581,
+      "best_clip_lat_ms": 1.0754170070867985,
+      "phrase": "Pause",
+      "response": "Paused.",
+      "acted": true
+    },
+    {
+      "true": "STOP",
+      "n_clips": 141,
+      "n_correct": 118,
+      "acc": 0.8368794326241135,
+      "best_clip_pred": "STOP",
+      "best_clip_conf": 0.9810289740562439,
+      "best_clip_lat_ms": 0.7767499919282272,
+      "phrase": "Stop music",
+      "response": "Stopped.",
+      "acted": true
+    },
+    {
+      "true": "NEXT",
+      "n_clips": 141,
+      "n_correct": 124,
+      "acc": 0.8794326241134752,
+      "best_clip_pred": "NEXT",
+      "best_clip_conf": 0.9830223917961121,
+      "best_clip_lat_ms": 0.852083001518622,
+      "phrase": "Next song",
+      "response": "Nothing is playing.",
+      "acted": true
+    },
+    {
+      "true": "VOLUME_UP",
+      "n_clips": 141,
+      "n_correct": 90,
+      "acc": 0.6382978723404256,
+      "best_clip_pred": "VOLUME_UP",
+      "best_clip_conf": 0.9791345596313477,
+      "best_clip_lat_ms": 0.8571670041419566,
+      "phrase": "Volume up",
+      "response": "Volume up, now at 60.",
+      "acted": true
+    },
+    {
+      "true": "VOLUME_DOWN",
+      "n_clips": 141,
+      "n_correct": 111,
+      "acc": 0.7872340425531915,
+      "best_clip_pred": "VOLUME_DOWN",
+      "best_clip_conf": 0.9844842553138733,
+      "best_clip_lat_ms": 1.3546249974751845,
+      "phrase": "Volume down",
+      "response": "Volume down, now at 50.",
+      "acted": true
+    },
+    {
+      "true": "CALL",
+      "n_clips": 141,
+      "n_correct": 123,
+      "acc": 0.8723404255319149,
+      "best_clip_pred": "CALL",
+      "best_clip_conf": 0.9743121266365051,
+      "best_clip_lat_ms": 1.0375840065535158,
+      "phrase": "Call",
+      "response": "Calling home.",
+      "acted": true
+    },
+    {
+      "true": "MESSAGE",
+      "n_clips": 137,
+      "n_correct": 122,
+      "acc": 0.8905109489051095,
+      "best_clip_pred": "MESSAGE",
+      "best_clip_conf": 0.9787907600402832,
+      "best_clip_lat_ms": 2.181583011406474,
+      "phrase": "Message",
+      "response": "Sending a message to home.",
+      "acted": true
+    },
+    {
+      "true": "LIST_REMINDERS",
+      "n_clips": 141,
+      "n_correct": 111,
+      "acc": 0.7872340425531915,
+      "best_clip_pred": "LIST_REMINDERS",
+      "best_clip_conf": 0.9774059653282166,
+      "best_clip_lat_ms": 1.0360000014770776,
+      "phrase": "Reminders",
+      "response": "You have no reminders.",
+      "acted": true
+    },
+    {
+      "true": "TIMER",
+      "n_clips": 423,
+      "n_correct": 381,
+      "acc": 0.900709219858156,
+      "best_clip_pred": "TIMER",
+      "best_clip_conf": 0.9899702668190002,
+      "best_clip_lat_ms": 1.497167002526112,
+      "phrase": "Timer 10 seconds",
+      "response": "Timer set for 10 seconds.",
+      "acted": true
+    },
+    {
+      "true": "ALARM",
+      "n_clips": 423,
+      "n_correct": 374,
+      "acc": 0.8841607565011821,
+      "best_clip_pred": "ALARM",
+      "best_clip_conf": 0.9888878464698792,
+      "best_clip_lat_ms": 1.1273749987594783,
+      "phrase": "Alarm 6 AM",
+      "response": "Alarm set for 06:00.",
+      "acted": true
+    },
+    {
+      "true": "TEMPERATURE",
+      "n_clips": 423,
+      "n_correct": 386,
+      "acc": 0.9125295508274232,
+      "best_clip_pred": "TEMPERATURE",
+      "best_clip_conf": 0.9808550477027893,
+      "best_clip_lat_ms": 0.993042005575262,
+      "phrase": "Temperature 18 degrees",
+      "response": "Setting the thermostat to 18 degrees.",
+      "acted": true
+    },
+    {
+      "true": "BRIGHTNESS",
+      "n_clips": 423,
+      "n_correct": 375,
+      "acc": 0.8865248226950354,
+      "best_clip_pred": "BRIGHTNESS",
+      "best_clip_conf": 0.9861250519752502,
+      "best_clip_lat_ms": 0.9242910018656403,
+      "phrase": "Bin lights to 20%.",
+      "response": "Setting brightness to 20 percent.",
+      "acted": true
+    },
+    {
+      "true": "COLOR",
+      "n_clips": 423,
+      "n_correct": 359,
+      "acc": 0.8486997635933806,
+      "best_clip_pred": "COLOR",
+      "best_clip_conf": 0.9904685616493225,
+      "best_clip_lat_ms": 0.8830419974401593,
+      "phrase": "Change the lights to Red",
+      "response": "Setting the lights to red.",
+      "acted": true
+    },
+    {
+      "true": "CREATE_REMINDER",
+      "n_clips": 423,
+      "n_correct": 391,
+      "acc": 0.9243498817966903,
+      "best_clip_pred": "CREATE_REMINDER",
+      "best_clip_conf": 0.981929361820221,
+      "best_clip_lat_ms": 0.7905420061433688,
+      "phrase": "Reminder drink water",
+      "response": "Okay, I'll remind you to drink water.",
+      "acted": true
+    }
+  ],
+  "categories": {
+    "alarms": {
+      "clips": 423,
+      "correct": 374,
+      "acc": 0.8842
+    },
+    "brightness/color": {
+      "clips": 846,
+      "correct": 734,
+      "acc": 0.8676
+    },
+    "calls/messages": {
+      "clips": 278,
+      "correct": 245,
+      "acc": 0.8813
+    },
+    "lights": {
+      "clips": 282,
+      "correct": 225,
+      "acc": 0.7979
+    },
+    "media controls": {
+      "clips": 705,
+      "correct": 574,
+      "acc": 0.8142
+    },
+    "music": {
+      "clips": 141,
+      "correct": 115,
+      "acc": 0.8156
+    },
+    "questions/search": {
+      "clips": 282,
+      "correct": 228,
+      "acc": 0.8085
+    },
+    "reminders/lists": {
+      "clips": 564,
+      "correct": 502,
+      "acc": 0.8901
+    },
+    "thermostat": {
+      "clips": 423,
+      "correct": 386,
+      "acc": 0.9125
+    },
+    "timers": {
+      "clips": 423,
+      "correct": 381,
+      "acc": 0.9007
+    }
+  },
+  "overall_inscope_acc": 0.8619189374856882,
+  "overall_correct": 3764,
+  "overall_n": 4367,
+  "latency_ms": {
+    "p50": 0.7587089930893853,
+    "p95": 2.078158604854251,
+    "wall_per_clip_ms": 1.027926307224852
+  },
+  "device_state": {
+    "lights": true,
+    "brightness": 20,
+    "color": "red",
+    "thermostat": {
+      "mode": "cool",
+      "target_c": 18.0,
+      "current_c": 24.0
+    },
+    "volume": 50,
+    "music": {
+      "playing": false,
+      "track": null,
+      "paused": false
+    },
+    "n_timers": 1,
+    "n_alarms": 1,
+    "n_reminders": 1,
+    "n_calls": 1,
+    "n_messages": 1
+  },
+  "events": [
+    "[03:56:20] audio PLAYING track3_lofi.wav (track3_lofi)",
+    "[03:56:20] music PLAYING: track3_lofi",
+    "[03:56:20] lights ON (brightness 80%, color white)",
+    "[03:56:20] lights OFF",
+    "[03:56:20] music PAUSED",
+    "[03:56:20] music STOPPED",
+    "[03:56:20] volume -> 60",
+    "[03:56:20] volume -> 50",
+    "[03:56:20] CALL (simulated) -> home",
+    "[03:56:20] MESSAGE (simulated) -> home",
+    "[03:56:20] timer #1 set for 10s",
+    "[03:56:20] alarm #2 set for 06:00",
+    "[03:56:20] thermostat -> 18.0\u00b0C (cool)",
+    "[03:56:20] brightness -> 20%",
+    "[03:56:20] color -> red",
+    "[03:56:20] reminder #3: drink water (due None)"
+  ]
+}

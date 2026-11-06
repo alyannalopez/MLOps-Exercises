@@ -1,13 +1,22 @@
+# --- Large datasets ---
+data/
+
 # --- Python ---
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
 
 # --- Virtual environments (regenerable; see requirements.txt) ---
 .venv-kokoro/
 .venv/
 venv/
+ME2/pi_bundle/.venv/
+ME2/pi_bundle/**/__pycache__/
+ME2/pi_bundle/**/*.py[cod]
 
 # --- Downloadable model weights (see scripts/download_model.sh + setup_kokoro.sh) ---
 # ~1.1 GB total. Not committed; re-download on a fresh clone.
@@ -22,8 +31,34 @@ data/probe_out.txt
 data/probe_err.txt
 data/audio/*.wav
 
-# --- macOS ---
+# --- macOS / OS / editor junk ---
 .DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# --- Logs & transient outputs ---
+*.log
+serve_logs/
+serve_registry.json
+ME2/pi_bundle/web/_ws_*.py
+ME2/pi_bundle/web/_ws_*.out
+ME2/pi_bundle/web/_ww_check.py
+docs/deck/*.aux
+docs/deck/*.nav
+docs/deck/*.snm
+docs/deck/*.toc
+
+# --- Local search / tooling state ---
+local_search/
+.onit/
+
+# --- Big bundled archives ---
+pi_bundle.zip
+
+# --- Nested vcm-benchmark repo (has its own remote: airimonda/vcm-benchmark) ---
+vcm-benchmark/
 
 # --- OnIt Step 8 scratch + isolated venv ---
 onit/onit_work/

@@ -1,0 +1,29 @@
+{
+  "arch": "mlp",
+  "seed": 0,
+  "n_params": 39828,
+  "best_epoch": 84,
+  "best_val_balanced_acc": 0.2553621961985443,
+  "final_val_acc": 0.25591306200724484,
+  "final_val_balanced_acc": 0.2553621961985443,
+  "final_val_oos_acc": 0.36503067484662577,
+  "train_seconds": 1503.8,
+  "epochs_run": 99,
+  "device": "mps",
+  "n_train": 11733,
+  "n_val": 4693,
+  "config": {
+    "arch": "mlp",
+    "epochs": 100,
+    "batch": 64,
+    "lr": 0.0003,
+    "weight_decay": 0.0001,
+    "patience": 15,
+    "real_weight": 5.0,
+    "oos_weight": 3.0,
+    "label_smoothing": 0.1,
+    "seed": 0,
+    "workers": 0,
+    "device": null
+  }
+}

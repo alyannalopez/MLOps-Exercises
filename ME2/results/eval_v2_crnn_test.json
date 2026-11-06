@@ -1,0 +1,1552 @@
+{
+  "checkpoint": "models/crnn_seed0/best.pt",
+  "arch": "crnn",
+  "split": "test+neg_test",
+  "n_clips": 4693,
+  "n_params": 419956,
+  "checkpoint_size_mb": 1.61,
+  "flops_estimate_per_inference": 839912,
+  "flops_note": "Rough proxy (params \u00d7 2). Real GFLOP/s requires torch.profiler on target HW.",
+  "accuracy": 0.8436,
+  "accuracy_ci95": [
+    0.8332,
+    0.8545
+  ],
+  "balanced_accuracy": 0.8323,
+  "balanced_accuracy_ci95": [
+    0.8206,
+    0.8442
+  ],
+  "macro_precision": 0.8476,
+  "macro_recall": 0.8323,
+  "macro_f1": 0.8373,
+  "macro_f2": 0.8335,
+  "real_voice_accuracy": 0.4223,
+  "synthetic_voice_accuracy": 0.9333,
+  "oos_false_accept_rate": 0.2822,
+  "oos_false_accept_count": 92,
+  "oos_false_reject_rate": 0.0637,
+  "oos_false_reject_count": 278,
+  "latency_ms": {
+    "p50": 0.91,
+    "p95": 1.09,
+    "p99": 1.2,
+    "mean": 0.95,
+    "max": 2.18
+  },
+  "rtf_estimate": 0.0009,
+  "rtf_note": "RTF = inference_time / clip_duration (1.0s). Computed on Apple Silicon CPU.",
+  "per_intent": {
+    "PLAY_MUSIC": {
+      "support": 141,
+      "precision": 0.8085,
+      "recall": 0.8085,
+      "f1": 0.8085,
+      "f2": 0.8085
+    },
+    "WEATHER": {
+      "support": 141,
+      "precision": 0.9219,
+      "recall": 0.8369,
+      "f1": 0.8773,
+      "f2": 0.8526
+    },
+    "TIME": {
+      "support": 141,
+      "precision": 0.7692,
+      "recall": 0.8511,
+      "f1": 0.8081,
+      "f2": 0.8333
+    },
+    "LIGHT_ON": {
+      "support": 141,
+      "precision": 0.8248,
+      "recall": 0.8014,
+      "f1": 0.8129,
+      "f2": 0.806
+    },
+    "LIGHT_OFF": {
+      "support": 141,
+      "precision": 0.7671,
+      "recall": 0.7943,
+      "f1": 0.7805,
+      "f2": 0.7887
+    },
+    "PAUSE": {
+      "support": 141,
+      "precision": 0.8038,
+      "recall": 0.9007,
+      "f1": 0.8495,
+      "f2": 0.8795
+    },
+    "STOP": {
+      "support": 141,
+      "precision": 0.9333,
+      "recall": 0.7943,
+      "f1": 0.8582,
+      "f2": 0.8187
+    },
+    "NEXT": {
+      "support": 141,
+      "precision": 0.8776,
+      "recall": 0.9149,
+      "f1": 0.8958,
+      "f2": 0.9072
+    },
+    "VOLUME_UP": {
+      "support": 141,
+      "precision": 0.694,
+      "recall": 0.6596,
+      "f1": 0.6764,
+      "f2": 0.6662
+    },
+    "VOLUME_DOWN": {
+      "support": 141,
+      "precision": 0.7714,
+      "recall": 0.766,
+      "f1": 0.7687,
+      "f2": 0.767
+    },
+    "CALL": {
+      "support": 141,
+      "precision": 0.9531,
+      "recall": 0.8652,
+      "f1": 0.9071,
+      "f2": 0.8815
+    },
+    "MESSAGE": {
+      "support": 137,
+      "precision": 0.9365,
+      "recall": 0.8613,
+      "f1": 0.8973,
+      "f2": 0.8754
+    },
+    "LIST_REMINDERS": {
+      "support": 141,
+      "precision": 0.8273,
+      "recall": 0.8156,
+      "f1": 0.8214,
+      "f2": 0.8179
+    },
+    "TIMER": {
+      "support": 423,
+      "precision": 0.9401,
+      "recall": 0.8534,
+      "f1": 0.8947,
+      "f2": 0.8695
+    },
+    "ALARM": {
+      "support": 423,
+      "precision": 0.9165,
+      "recall": 0.8818,
+      "f1": 0.8988,
+      "f2": 0.8885
+    },
+    "TEMPERATURE": {
+      "support": 423,
+      "precision": 0.9257,
+      "recall": 0.9125,
+      "f1": 0.919,
+      "f2": 0.9151
+    },
+    "BRIGHTNESS": {
+      "support": 423,
+      "precision": 0.9587,
+      "recall": 0.8771,
+      "f1": 0.916,
+      "f2": 0.8923
+    },
+    "COLOR": {
+      "support": 423,
+      "precision": 0.9098,
+      "recall": 0.8345,
+      "f1": 0.8705,
+      "f2": 0.8486
+    },
+    "CREATE_REMINDER": {
+      "support": 423,
+      "precision": 0.9548,
+      "recall": 0.8983,
+      "f1": 0.9257,
+      "f2": 0.9091
+    },
+    "OUT_OF_SCOPE": {
+      "support": 326,
+      "precision": 0.457,
+      "recall": 0.7178,
+      "f1": 0.5585,
+      "f2": 0.6443
+    }
+  },
+  "top_confusion_pairs_intent_level": [
+    [
+      "TEMPERATURE",
+      "OUT_OF_SCOPE",
+      29
+    ],
+    [
+      "COLOR",
+      "OUT_OF_SCOPE",
+      29
+    ],
+    [
+      "BRIGHTNESS",
+      "OUT_OF_SCOPE",
+      27
+    ],
+    [
+      "TIMER",
+      "OUT_OF_SCOPE",
+      24
+    ],
+    [
+      "ALARM",
+      "OUT_OF_SCOPE",
+      24
+    ],
+    [
+      "CREATE_REMINDER",
+      "OUT_OF_SCOPE",
+      18
+    ],
+    [
+      "STOP",
+      "OUT_OF_SCOPE",
+      17
+    ],
+    [
+      "VOLUME_UP",
+      "OUT_OF_SCOPE",
+      14
+    ],
+    [
+      "COLOR",
+      "LIGHT_OFF",
+      13
+    ],
+    [
+      "PLAY_MUSIC",
+      "OUT_OF_SCOPE",
+      12
+    ]
+  ],
+  "confusion_matrix": [
+    [
+      114,
+      0,
+      5,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      2,
+      0,
+      0,
+      1,
+      0,
+      2,
+      0,
+      12
+    ],
+    [
+      0,
+      118,
+      5,
+      0,
+      2,
+      0,
+      0,
+      0,
+      1,
+      3,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      2,
+      0,
+      8
+    ],
+    [
+      1,
+      0,
+      120,
+      1,
+      0,
+      2,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      11
+    ],
+    [
+      1,
+      2,
+      2,
+      113,
+      5,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      2,
+      0,
+      1,
+      3,
+      0,
+      8
+    ],
+    [
+      1,
+      0,
+      1,
+      7,
+      112,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      0,
+      1,
+      5,
+      0,
+      11
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      127,
+      1,
+      1,
+      1,
+      3,
+      0,
+      0,
+      0,
+      2,
+      0,
+      0,
+      0,
+      1,
+      0,
+      5
+    ],
+    [
+      1,
+      0,
+      1,
+      1,
+      1,
+      2,
+      112,
+      2,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      17
+    ],
+    [
+      1,
+      0,
+      2,
+      0,
+      0,
+      0,
+      0,
+      129,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      3,
+      0,
+      6
+    ],
+    [
+      3,
+      2,
+      4,
+      3,
+      1,
+      2,
+      2,
+      1,
+      93,
+      9,
+      0,
+      0,
+      1,
+      1,
+      3,
+      1,
+      0,
+      1,
+      0,
+      14
+    ],
+    [
+      2,
+      0,
+      2,
+      0,
+      0,
+      2,
+      0,
+      2,
+      8,
+      108,
+      0,
+      1,
+      0,
+      1,
+      3,
+      0,
+      1,
+      1,
+      0,
+      10
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+      1,
+      6,
+      2,
+      0,
+      1,
+      1,
+      122,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      7
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      2,
+      0,
+      1,
+      1,
+      118,
+      1,
+      1,
+      2,
+      0,
+      0,
+      1,
+      0,
+      8
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      4,
+      4,
+      0,
+      0,
+      115,
+      0,
+      1,
+      0,
+      0,
+      2,
+      3,
+      10
+    ],
+    [
+      2,
+      0,
+      5,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      5,
+      3,
+      361,
+      9,
+      8,
+      1,
+      1,
+      1,
+      24
+    ],
+    [
+      5,
+      2,
+      3,
+      1,
+      3,
+      1,
+      0,
+      0,
+      5,
+      1,
+      1,
+      0,
+      1,
+      0,
+      373,
+      0,
+      0,
+      2,
+      1,
+      24
+    ],
+    [
+      3,
+      0,
+      1,
+      0,
+      0,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      386,
+      0,
+      1,
+      0,
+      29
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      2,
+      0,
+      3,
+      0,
+      0,
+      0,
+      0,
+      0,
+      5,
+      2,
+      8,
+      371,
+      2,
+      2,
+      27
+    ],
+    [
+      1,
+      3,
+      1,
+      4,
+      13,
+      3,
+      0,
+      0,
+      7,
+      0,
+      0,
+      0,
+      2,
+      1,
+      3,
+      0,
+      2,
+      353,
+      1,
+      29
+    ],
+    [
+      0,
+      0,
+      0,
+      2,
+      2,
+      0,
+      0,
+      2,
+      0,
+      4,
+      0,
+      0,
+      11,
+      0,
+      2,
+      1,
+      1,
+      0,
+      380,
+      18
+    ],
+    [
+      6,
+      1,
+      3,
+      3,
+      4,
+      4,
+      0,
+      3,
+      8,
+      5,
+      3,
+      2,
+      2,
+      9,
+      5,
+      10,
+      7,
+      7,
+      10,
+      234
+    ]
+  ],
+  "slot_metrics": {
+    "ALARM": {
+      "n_clips": 423,
+      "intent_correct": 373,
+      "intent_wrong": 50,
+      "intent_accuracy": 0.8818,
+      "slot_exact_match_upper_bound": 0.8818,
+      "note": "Intent-level model: slot resolved correctly iff intent is correct. Per-slot (e.g. 10s vs 30s vs 1min) accuracy requires a slot-prediction head.",
+      "slot_distribution": {
+        "6:00 AM": 141,
+        "8:00 AM": 141,
+        "9:00 PM": 141
+      }
+    },
+    "BRIGHTNESS": {
+      "n_clips": 423,
+      "intent_correct": 371,
+      "intent_wrong": 52,
+      "intent_accuracy": 0.8771,
+      "slot_exact_match_upper_bound": 0.8771,
+      "note": "Intent-level model: slot resolved correctly iff intent is correct. Per-slot (e.g. 10s vs 30s vs 1min) accuracy requires a slot-prediction head.",
+      "slot_distribution": {
+        "20 percent": 141,
+        "60 percent": 141,
+        "100 percent": 141
+      }
+    },
+    "COLOR": {
+      "n_clips": 423,
+      "intent_correct": 353,
+      "intent_wrong": 70,
+      "intent_accuracy": 0.8345,
+      "slot_exact_match_upper_bound": 0.8345,
+      "note": "Intent-level model: slot resolved correctly iff intent is correct. Per-slot (e.g. 10s vs 30s vs 1min) accuracy requires a slot-prediction head.",
+      "slot_distribution": {
+        "Red": 141,
+        "Blue": 141,
+        "Green": 141
+      }
+    },
+    "CREATE_REMINDER": {
+      "n_clips": 423,
+      "intent_correct": 380,
+      "intent_wrong": 43,
+      "intent_accuracy": 0.8983,
+      "slot_exact_match_upper_bound": 0.8983,
+      "note": "Intent-level model: slot resolved correctly iff intent is correct. Per-slot (e.g. 10s vs 30s vs 1min) accuracy requires a slot-prediction head.",
+      "slot_distribution": {
+        "Drink water": 141,
+        "Study": 141,
+        "Exercise": 141
+      }
+    },
+    "TEMPERATURE": {
+      "n_clips": 423,
+      "intent_correct": 386,
+      "intent_wrong": 37,
+      "intent_accuracy": 0.9125,
+      "slot_exact_match_upper_bound": 0.9125,
+      "note": "Intent-level model: slot resolved correctly iff intent is correct. Per-slot (e.g. 10s vs 30s vs 1min) accuracy requires a slot-prediction head.",
+      "slot_distribution": {
+        "18 degrees": 141,
+        "22 degrees": 141,
+        "26 degrees": 141
+      }
+    },
+    "TIMER": {
+      "n_clips": 423,
+      "intent_correct": 361,
+      "intent_wrong": 62,
+      "intent_accuracy": 0.8534,
+      "slot_exact_match_upper_bound": 0.8534,
+      "note": "Intent-level model: slot resolved correctly iff intent is correct. Per-slot (e.g. 10s vs 30s vs 1min) accuracy requires a slot-prediction head.",
+      "slot_distribution": {
+        "10 seconds": 141,
+        "30 seconds": 141,
+        "1 minute": 141
+      }
+    }
+  },
+  "command_level": {
+    "per_variation": {
+      "Adjust brightness to 100 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Adjust brightness to 20 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 37,
+        "accuracy": 0.7872
+      },
+      "Adjust brightness to 60 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Alarm 6:00 AM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 45,
+        "accuracy": 0.9574
+      },
+      "Alarm 8:00 AM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 45,
+        "accuracy": 0.9574
+      },
+      "Alarm 9:00 PM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 40,
+        "accuracy": 0.8511
+      },
+      "Brightness 100 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 37,
+        "accuracy": 0.7872
+      },
+      "Brightness 20 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 40,
+        "accuracy": 0.8511
+      },
+      "Brightness 60 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Brightness level 100 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Brightness level 20 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Brightness level 60 percent": {
+        "intent": "BRIGHTNESS",
+        "n_clips": 47,
+        "correct": 45,
+        "accuracy": 0.9574
+      },
+      "Call": {
+        "intent": "CALL",
+        "n_clips": 47,
+        "correct": 38,
+        "accuracy": 0.8085
+      },
+      "Change color to Blue": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 32,
+        "accuracy": 0.6809
+      },
+      "Change color to Green": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 38,
+        "accuracy": 0.8085
+      },
+      "Change color to Red": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 34,
+        "accuracy": 0.7234
+      },
+      "Change the temperature to 18 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Change the temperature to 22 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Change the temperature to 26 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Countdown for 1 minute": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Countdown for 10 seconds": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Countdown for 30 seconds": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Create a reminder to Drink water": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 38,
+        "accuracy": 0.8085
+      },
+      "Create a reminder to Exercise": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Create a reminder to Study": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "End playback": {
+        "intent": "STOP",
+        "n_clips": 47,
+        "correct": 35,
+        "accuracy": 0.7447
+      },
+      "Increase the volume": {
+        "intent": "VOLUME_UP",
+        "n_clips": 47,
+        "correct": 34,
+        "accuracy": 0.7234
+      },
+      "Kill the lights": {
+        "intent": "LIGHT_OFF",
+        "n_clips": 47,
+        "correct": 37,
+        "accuracy": 0.7872
+      },
+      "Lights on": {
+        "intent": "LIGHT_ON",
+        "n_clips": 47,
+        "correct": 34,
+        "accuracy": 0.7234
+      },
+      "Lights out": {
+        "intent": "LIGHT_OFF",
+        "n_clips": 47,
+        "correct": 36,
+        "accuracy": 0.766
+      },
+      "List my reminders": {
+        "intent": "LIST_REMINDERS",
+        "n_clips": 47,
+        "correct": 37,
+        "accuracy": 0.7872
+      },
+      "Lower the volume": {
+        "intent": "VOLUME_DOWN",
+        "n_clips": 47,
+        "correct": 35,
+        "accuracy": 0.7447
+      },
+      "Make a call": {
+        "intent": "CALL",
+        "n_clips": 47,
+        "correct": 45,
+        "accuracy": 0.9574
+      },
+      "Make a phone call": {
+        "intent": "CALL",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Message": {
+        "intent": "MESSAGE",
+        "n_clips": 43,
+        "correct": 38,
+        "accuracy": 0.8837
+      },
+      "Next song": {
+        "intent": "NEXT",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Pause": {
+        "intent": "PAUSE",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Pause audio": {
+        "intent": "PAUSE",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Pause song": {
+        "intent": "PAUSE",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Play music": {
+        "intent": "PLAY_MUSIC",
+        "n_clips": 47,
+        "correct": 36,
+        "accuracy": 0.766
+      },
+      "Play next song": {
+        "intent": "NEXT",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Play some music": {
+        "intent": "PLAY_MUSIC",
+        "n_clips": 47,
+        "correct": 40,
+        "accuracy": 0.8511
+      },
+      "Power on the lights": {
+        "intent": "LIGHT_ON",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Remind me to Drink water": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Remind me to Exercise": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Remind me to Study": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Reminder Drink water": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Reminder Exercise": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Reminder Study": {
+        "intent": "CREATE_REMINDER",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Reminders": {
+        "intent": "LIST_REMINDERS",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Send a message": {
+        "intent": "MESSAGE",
+        "n_clips": 47,
+        "correct": 38,
+        "accuracy": 0.8085
+      },
+      "Send my message": {
+        "intent": "MESSAGE",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Set an alarm for 6:00 AM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 32,
+        "accuracy": 0.6809
+      },
+      "Set an alarm for 8:00 AM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Set an alarm for 9:00 PM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 40,
+        "accuracy": 0.8511
+      },
+      "Set color to Blue": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 33,
+        "accuracy": 0.7021
+      },
+      "Set color to Green": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Set color to Red": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Set the temperature to 18 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 45,
+        "accuracy": 0.9574
+      },
+      "Set the temperature to 22 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Set the temperature to 26 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Show my reminders": {
+        "intent": "LIST_REMINDERS",
+        "n_clips": 47,
+        "correct": 36,
+        "accuracy": 0.766
+      },
+      "Shut off the lights": {
+        "intent": "LIGHT_OFF",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Skip song": {
+        "intent": "NEXT",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Start a timer for 1 minute": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 40,
+        "accuracy": 0.8511
+      },
+      "Start a timer for 10 seconds": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Start a timer for 30 seconds": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Start music": {
+        "intent": "PLAY_MUSIC",
+        "n_clips": 47,
+        "correct": 38,
+        "accuracy": 0.8085
+      },
+      "Stop": {
+        "intent": "STOP",
+        "n_clips": 47,
+        "correct": 38,
+        "accuracy": 0.8085
+      },
+      "Stop playing": {
+        "intent": "STOP",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Switch color to Blue": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 45,
+        "accuracy": 0.9574
+      },
+      "Switch color to Green": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Switch color to Red": {
+        "intent": "COLOR",
+        "n_clips": 47,
+        "correct": 47,
+        "accuracy": 1.0
+      },
+      "Tell me the time": {
+        "intent": "TIME",
+        "n_clips": 47,
+        "correct": 38,
+        "accuracy": 0.8085
+      },
+      "Tell me the weather": {
+        "intent": "WEATHER",
+        "n_clips": 47,
+        "correct": 42,
+        "accuracy": 0.8936
+      },
+      "Temperature 18 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Temperature 22 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Temperature 26 degrees": {
+        "intent": "TEMPERATURE",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Time": {
+        "intent": "TIME",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Timer 1 minute": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 38,
+        "accuracy": 0.8085
+      },
+      "Timer 10 seconds": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 40,
+        "accuracy": 0.8511
+      },
+      "Timer 30 seconds": {
+        "intent": "TIMER",
+        "n_clips": 47,
+        "correct": 39,
+        "accuracy": 0.8298
+      },
+      "Turn on the lights": {
+        "intent": "LIGHT_ON",
+        "n_clips": 47,
+        "correct": 40,
+        "accuracy": 0.8511
+      },
+      "Turn the volume down": {
+        "intent": "VOLUME_DOWN",
+        "n_clips": 47,
+        "correct": 32,
+        "accuracy": 0.6809
+      },
+      "Turn the volume up": {
+        "intent": "VOLUME_UP",
+        "n_clips": 47,
+        "correct": 32,
+        "accuracy": 0.6809
+      },
+      "Volume down": {
+        "intent": "VOLUME_DOWN",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "Volume up": {
+        "intent": "VOLUME_UP",
+        "n_clips": 47,
+        "correct": 27,
+        "accuracy": 0.5745
+      },
+      "Wake me up at 6:00 AM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Wake me up at 8:00 AM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 43,
+        "accuracy": 0.9149
+      },
+      "Wake me up at 9:00 PM": {
+        "intent": "ALARM",
+        "n_clips": 47,
+        "correct": 44,
+        "accuracy": 0.9362
+      },
+      "Weather": {
+        "intent": "WEATHER",
+        "n_clips": 47,
+        "correct": 36,
+        "accuracy": 0.766
+      },
+      "What time is it?": {
+        "intent": "TIME",
+        "n_clips": 47,
+        "correct": 41,
+        "accuracy": 0.8723
+      },
+      "What's the weather?": {
+        "intent": "WEATHER",
+        "n_clips": 47,
+        "correct": 40,
+        "accuracy": 0.8511
+      }
+    },
+    "top_command_confusion_pairs": [
+      [
+        "TEMPERATURE",
+        "OUT_OF_SCOPE",
+        29
+      ],
+      [
+        "COLOR",
+        "OUT_OF_SCOPE",
+        29
+      ],
+      [
+        "BRIGHTNESS",
+        "OUT_OF_SCOPE",
+        27
+      ],
+      [
+        "TIMER",
+        "OUT_OF_SCOPE",
+        24
+      ],
+      [
+        "ALARM",
+        "OUT_OF_SCOPE",
+        24
+      ],
+      [
+        "CREATE_REMINDER",
+        "OUT_OF_SCOPE",
+        18
+      ],
+      [
+        "STOP",
+        "OUT_OF_SCOPE",
+        17
+      ],
+      [
+        "VOLUME_UP",
+        "OUT_OF_SCOPE",
+        14
+      ],
+      [
+        "COLOR",
+        "LIGHT_OFF",
+        13
+      ],
+      [
+        "PLAY_MUSIC",
+        "OUT_OF_SCOPE",
+        12
+      ],
+      [
+        "TIME",
+        "OUT_OF_SCOPE",
+        11
+      ],
+      [
+        "LIGHT_OFF",
+        "OUT_OF_SCOPE",
+        11
+      ],
+      [
+        "CREATE_REMINDER",
+        "LIST_REMINDERS",
+        11
+      ],
+      [
+        "VOLUME_DOWN",
+        "OUT_OF_SCOPE",
+        10
+      ],
+      [
+        "LIST_REMINDERS",
+        "OUT_OF_SCOPE",
+        10
+      ]
+    ],
+    "note": "Models classify at intent level (20 classes). Variations within an intent (e.g. 'Timer 10 seconds' vs 'Countdown for 10 seconds') are NOT distinguished. Command-level accuracy = intent-level accuracy for the parent intent."
+  },
+  "misfire_decomposition": {
+    "total_clips": 4693,
+    "total_correct": 3959,
+    "total_errors": 734,
+    "cross_intent_errors": 364,
+    "inscope_to_oos (false_reject)": 278,
+    "oos_to_inscope (false_accept)": 92,
+    "cross_intent_rate": 0.0776,
+    "false_reject_rate": 0.0592,
+    "false_accept_rate": 0.2822
+  },
+  "pipeline_stats_by_threshold": {
+    "threshold_0.5": {
+      "response_rate": 0.8231,
+      "no_response_rate": 0.1769,
+      "n_respond": 3863,
+      "n_no_response": 830,
+      "responded_correct": 3588,
+      "responded_wrong": 275,
+      "extra_fires (OOS responded)": 196,
+      "missed_commands (in-scope silent)": 700,
+      "inscope_response_precision": 0.9307,
+      "inscope_response_recall": 0.7815
+    },
+    "threshold_0.6": {
+      "response_rate": 0.7539,
+      "no_response_rate": 0.2461,
+      "n_respond": 3538,
+      "n_no_response": 1155,
+      "responded_correct": 3342,
+      "responded_wrong": 196,
+      "extra_fires (OOS responded)": 154,
+      "missed_commands (in-scope silent)": 983,
+      "inscope_response_precision": 0.9444,
+      "inscope_response_recall": 0.7319
+    },
+    "threshold_0.7": {
+      "response_rate": 0.675,
+      "no_response_rate": 0.325,
+      "n_respond": 3168,
+      "n_no_response": 1525,
+      "responded_correct": 3049,
+      "responded_wrong": 119,
+      "extra_fires (OOS responded)": 128,
+      "missed_commands (in-scope silent)": 1327,
+      "inscope_response_precision": 0.9632,
+      "inscope_response_recall": 0.6705
+    },
+    "threshold_0.8": {
+      "response_rate": 0.5504,
+      "no_response_rate": 0.4496,
+      "n_respond": 2583,
+      "n_no_response": 2110,
+      "responded_correct": 2561,
+      "responded_wrong": 22,
+      "extra_fires (OOS responded)": 94,
+      "missed_commands (in-scope silent)": 1878,
+      "inscope_response_precision": 0.9916,
+      "inscope_response_recall": 0.5651
+    },
+    "threshold_0.85": {
+      "response_rate": 0.4686,
+      "no_response_rate": 0.5314,
+      "n_respond": 2199,
+      "n_no_response": 2494,
+      "responded_correct": 2193,
+      "responded_wrong": 6,
+      "extra_fires (OOS responded)": 83,
+      "missed_commands (in-scope silent)": 2251,
+      "inscope_response_precision": 0.9972,
+      "inscope_response_recall": 0.4832
+    },
+    "threshold_0.9": {
+      "response_rate": 0.3529,
+      "no_response_rate": 0.6471,
+      "n_respond": 1656,
+      "n_no_response": 3037,
+      "responded_correct": 1656,
+      "responded_wrong": 0,
+      "extra_fires (OOS responded)": 47,
+      "missed_commands (in-scope silent)": 2758,
+      "inscope_response_precision": 1.0,
+      "inscope_response_recall": 0.3684
+    },
+    "threshold_0.95": {
+      "response_rate": 0.1775,
+      "no_response_rate": 0.8225,
+      "n_respond": 833,
+      "n_no_response": 3860,
+      "responded_correct": 833,
+      "responded_wrong": 0,
+      "extra_fires (OOS responded)": 6,
+      "missed_commands (in-scope silent)": 3540,
+      "inscope_response_precision": 1.0,
+      "inscope_response_recall": 0.1894
+    }
+  },
+  "unknown_intent_analysis": {
+    "oos_clip_count": 326,
+    "oos_transcripts_sample": [
+      "On this night, Impact!",
+      "He occupied the throne with the help of the Nogay nobility.",
+      "It is the county seat of Hanson County.",
+      "Kayserispor fans retaliated by marching onto the Sivasspor supporters with stones, sticks and knives.",
+      "Andrew leads a revolt and takes a Council member hostage.",
+      "He composed six numbered symphonies.",
+      "A common material is silicon.",
+      "Tea served from the brown jug is tasty.",
+      "Guay resides in Amherst, Massachusetts with her husband, artist Matthew Mitchell.",
+      "Margaret Curtis lost to May Hezlet while Harriot Curtis lost to Elinor Neville.",
+      "The scarlet, blue, and gold disk represents the unit's joint Navy-Marine Corps origins.",
+      "The farm is open to the public all year-round.",
+      "The memorial is a fountain in the form of an asymmetric inverted stone cone.",
+      "This was done to show solidarity with the \"Phoenix New Times\".",
+      "play chess app",
+      "Increase the heating in the kitchen",
+      "can you add to my calendar an event for next friday",
+      "dim the bed room lights ",
+      "how close is it to eight pm",
+      "Decrease the temperature in the washroom"
+    ],
+    "oos_transcripts_available": 76,
+    "inscope_pushed_to_oos": {
+      "TEMPERATURE": 29,
+      "COLOR": 29,
+      "BRIGHTNESS": 27,
+      "TIMER": 24,
+      "ALARM": 24,
+      "CREATE_REMINDER": 18,
+      "STOP": 17,
+      "VOLUME_UP": 14,
+      "PLAY_MUSIC": 12,
+      "TIME": 11
+    },
+    "oos_accepted_as_command": {
+      "CREATE_REMINDER": 10,
+      "TEMPERATURE": 10,
+      "TIMER": 9,
+      "VOLUME_UP": 8,
+      "BRIGHTNESS": 7,
+      "COLOR": 7,
+      "PLAY_MUSIC": 6,
+      "VOLUME_DOWN": 5,
+      "ALARM": 5,
+      "LIGHT_OFF": 4
+    }
+  },
+  "tbd_metrics": {
+    "wake_word_detection": "TBD \u2014 Stage 6 (OSS wake word not yet integrated)",
+    "rpi_latency": "TBD \u2014 Stage 6 (requires live RPi 4/5 measurement)",
+    "rpi_temp_clock_throttle": "TBD \u2014 Stage 6",
+    "rpi_cpu_ram_usage": "TBD \u2014 Stage 6",
+    "rpi_gflops": "TBD \u2014 Stage 6 (requires torch.profiler on RPi)",
+    "unseen_speaker_eval": "TBD \u2014 holdout.npz (202 clips, 5 speakers) reserved for live Pi test per dataset docs",
+    "own_voice_validation": "TBD \u2014 requires student-recorded voice samples"
+  },
+  "eval_seconds": 6.1
+}
