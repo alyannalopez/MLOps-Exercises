@@ -317,34 +317,139 @@ class PersistentOnItBackend(DelegateBackend):
 # ---------------------------------------------------------------------------
 # Factory — reads the ``delegate:`` block from config/config.yaml
 # ---------------------------------------------------------------------------
+class FallbackDelegateBackend(DelegateBackend):
+    """Try a PRIMARY harness, and if it fails, transparently retry on a BACKUP.
+
+    This is the resilience layer: ME3's OnIt worker can die (endpoint not
+    configured, broken venv, worker crash, timeout). Rather than speaking an
+    apology, we hand the same task to a second harness (e.g. Pipecat) and
+    speak whichever succeeds. The loop sees ONE backend; it never knows which
+    harness actually answered.
+
+    Failure modes that trigger the fallback:
+      * primary raises (worker died on boot, task error, timeout)
+      * primary is_available() is False (cheap pre-flight probe)
+    If BOTH fail, we surface the primary's error (it's the more specific one)
+    so the spoken apology is meaningful.
+    """
+
+    def __init__(self, primary: DelegateBackend, backup: DelegateBackend) -> None:
+        self.primary = primary
+        self.backup = backup
+
+    @property
+    def name(self) -> str:
+        return f"{self.primary.name} (fallback: {self.backup.name})"
+
+    def is_available(self) -> bool:
+        return self.primary.is_available() or self.backup.is_available()
+
+    def dispatch(self, task: str) -> str:
+        # Primary first.
+        if self.primary.is_available():
+            try:
+                return self.primary.dispatch(task)
+            except Exception as e:  # noqa: BLE001 - fall through to backup
+                primary_err = e
+        else:
+            primary_err = RuntimeError(f"{self.primary.name} unavailable")
+
+        # Backup.
+        try:
+            if self.backup.is_available():
+                return self.backup.dispatch(task)
+            raise RuntimeError(f"{self.backup.name} unavailable")
+        except Exception:  # noqa: BLE001 - both failed; keep primary's reason
+            raise primary_err from None
+
+    def shutdown(self) -> None:
+        for b in (self.primary, self.backup):
+            fn = getattr(b, "shutdown", None)
+            if callable(fn):
+                try:
+                    fn()
+                except Exception:  # noqa: BLE001
+                    pass
+
+
+def _build_onit(d: dict) -> DelegateBackend:
+    """Build the OnIt backend from the ``delegate`` config block."""
+    root = Path(__file__).resolve().parents[3]  # .../ME3
+    sandbox = root.parent  # .../sandbox
+    # Default to the PERSISTENT worker (boots OnIt once, stays warm). Set
+    # delegate.mode: oneshot to fall back to the per-task subprocess.
+    mode = (d.get("mode") or "persistent").lower()
+    if mode == "persistent":
+        return PersistentOnItBackend(
+            python=d.get("python") or str(sandbox / "onit-venv" / "bin" / "python"),
+            worker_script=d.get("worker") or str(sandbox / "onit" / "onit_worker.py"),
+            timeout=float(d.get("timeout", 120.0)),
+            boot_timeout=float(d.get("boot_timeout", 120.0)),
+            workdir=d.get("workdir") or None,
+        )
+    runner = d.get("runner") or str(sandbox / "onit" / "run_onit_task.sh")
+    return OnItBackend(
+        runner,
+        timeout=float(d.get("timeout", 120.0)),
+        workdir=d.get("workdir") or None,
+    )
+
+
+def _build_pipecat(d: dict) -> DelegateBackend:
+    """Build the Pipecat backup backend from the ``delegate`` config block.
+
+    Uses the SAME persistent-worker machinery as OnIt, pointed at
+    ``pipecat_worker.py``. The worker speaks the identical stdin/stdout
+    protocol, so no loop/brain changes are needed. Env vars (PIPECAT_HOST,
+    PIPECAT_MODEL, OPENAI_API_KEY) are forwarded from the config block so no
+    secrets live in code.
+    """
+    root = Path(__file__).resolve().parents[3]  # .../ME3
+    sandbox = root.parent  # .../sandbox
+    env_extra = {}
+    if d.get("pipecat_host"):
+        env_extra["PIPECAT_HOST"] = d["pipecat_host"]
+    if d.get("pipecat_model"):
+        env_extra["PIPECAT_MODEL"] = d["pipecat_model"]
+    if d.get("openai_api_key"):
+        env_extra["OPENAI_API_KEY"] = d["openai_api_key"]
+    return PersistentOnItBackend(
+        python=d.get("pipecat_python") or d.get("python") or str(sandbox / "onit-venv" / "bin" / "python"),
+        worker_script=d.get("pipecat_worker") or str(sandbox / "onit" / "pipecat_worker.py"),
+        timeout=float(d.get("timeout", 120.0)),
+        boot_timeout=float(d.get("boot_timeout", 120.0)),
+        workdir=d.get("workdir") or None,
+        env_extra=env_extra,
+    )
+
+
 def build_backend(cfg: dict) -> DelegateBackend:
     """Build the configured backend. ``cfg`` is the parsed config dict (may be
     empty). Returns a StubBackend when nothing is configured, so the loops
-    always have *something* to delegate to and never crash."""
+    always have *something* to delegate to and never crash.
+
+    ``delegate.backend`` values:
+      * ``stub``     — canned offline reply (default when unset)
+      * ``onit``     — OnIt harness only
+      * ``pipecat``  — Pipecat harness only
+      * ``fallback`` — primary (``delegate.primary``, default onit) with an
+                       automatic backup (``delegate.backup``, default pipecat).
+                       If the primary fails, the task is retried on the backup.
+    """
     d = (cfg or {}).get("delegate") or {}
     kind = (d.get("backend") or "stub").lower()
     if kind == "stub":
         return StubBackend()
     if kind == "onit":
-        root = Path(__file__).resolve().parents[3]  # .../ME3
-        sandbox = root.parent  # .../sandbox
-        # Default to the PERSISTENT worker (boots OnIt once, stays warm). Set
-        # delegate.mode: oneshot to fall back to the per-task subprocess.
-        mode = (d.get("mode") or "persistent").lower()
-        if mode == "persistent":
-            return PersistentOnItBackend(
-                python=d.get("python") or str(sandbox / "onit-venv" / "bin" / "python"),
-                worker_script=d.get("worker") or str(sandbox / "onit_worker.py"),
-                timeout=float(d.get("timeout", 120.0)),
-                boot_timeout=float(d.get("boot_timeout", 120.0)),
-                workdir=d.get("workdir") or None,
-            )
-        runner = d.get("runner") or str(sandbox / "run_onit_task.sh")
-        return OnItBackend(
-            runner,
-            timeout=float(d.get("timeout", 120.0)),
-            workdir=d.get("workdir") or None,
-        )
+        return _build_onit(d)
+    if kind == "pipecat":
+        return _build_pipecat(d)
+    if kind == "fallback":
+        primary_kind = (d.get("primary") or "onit").lower()
+        backup_kind = (d.get("backup") or "pipecat").lower()
+        primary = _build_onit(d) if primary_kind == "onit" else _build_pipecat(d)
+        backup = _build_pipecat(d) if backup_kind == "pipecat" else _build_onit(d)
+        return FallbackDelegateBackend(primary, backup)
     # Unknown backend -> fall back to stub rather than crash the loop.
     return StubBackend()
 

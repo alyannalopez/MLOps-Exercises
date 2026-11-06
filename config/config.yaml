@@ -74,13 +74,26 @@ duplex:
 # about X", "write me a report") is handed here. ME3 measures turnaround /
 # keep-alive / result-back — never the harness internals.
 delegate:
-  backend: onit          # onit | stub   (stub = offline canned reply, no network)
+  # backend: onit | pipecat | fallback | stub
+  #   onit     -> OnIt harness only
+  #   pipecat  -> Pipecat harness only
+  #   fallback -> try `primary`, and if it FAILS (worker dies, endpoint unset,
+  #               timeout, task error) automatically retry on `backup`.
+  #   stub     -> offline canned reply (no network)
+  backend: fallback
+  primary: onit          # first harness to try
+  backup: pipecat        # second harness, used when primary fails
   mode: persistent       # persistent (default: one warm worker) | oneshot (subprocess/task)
   python: /Users/yannamii/sandbox/onit-venv/bin/python   # OnIt venv interpreter
-  worker: /Users/yannamii/sandbox/ME3/onit/onit_worker.py  # persistent worker daemon
+  worker: /Users/yannamii/sandbox/ME3/onit/onit_worker.py  # OnIt persistent worker daemon
   # runner: /Users/yannamii/sandbox/ME3/onit/run_onit_task.sh  # one-shot (only if mode: oneshot)
+  # --- Pipecat backup harness (used when backend=fallback and primary fails) ---
+  pipecat_worker: /Users/yannamii/sandbox/ME3/onit/pipecat_worker.py
+  # pipecat_python: /Users/yannamii/sandbox/onit-venv/bin/python   # reuse OnIt venv unless set
   # Endpoint/model are supplied via the environment (never in this file):
-  #   export ONIT_HOST=http://<host>:<port>/v1   [ONIT_HOST2, ONIT_MODEL, ONIT_DATA_PATH]
+  #   export ONIT_HOST=http://<host>:<port>/v1        [ONIT_HOST2, ONIT_MODEL, ONIT_DATA_PATH]
+  #   export PIPECAT_HOST=http://<host>:<port>/v1     [PIPECAT_MODEL, OPENAI_API_KEY]
+  # (Or set pipecat_host / pipecat_model / openai_api_key here to forward them to the worker.)
   wait_sec: 120          # max seconds to wait for a result before apologising
   boot_timeout: 120      # max seconds to wait for the worker to come up on first use
   # workdir: /Users/yannamii/sandbox   # where OnIt runs tasks (defaults to sandbox)

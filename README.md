@@ -3,8 +3,8 @@
 A real-time, **full-duplex** voice assistant: it listens and speaks at the same
 time, understands **barge-in** (interrupt it mid-sentence) vs **backchannel**
 ("mm-hm" while it talks → it keeps going), routes quick smart-home intents
-locally, and delegates anything harder to a black-box agent harness (**OnIt**)
-running on your own vLLM server.
+locally, and delegates anything harder to a black-box agent harness (**OnIt**,
+with **Pipecat** as an automatic backup) running on your own vLLM server.
 
 Built step-by-step (Steps 1–8 complete). See
 [`ME3 step-by-step implementation plan.md`](ME3%20step-by-step%20implementation%20plan.md).
@@ -17,7 +17,7 @@ mic ─▶ VAD (Silero) ─▶ ASR (whisper.cpp, local) ─▶ router (brain.py)
         ┌──────────────────────┬──────────────────────────┤
         ▼                      ▼                          ▼
   backchannel             quick_tool                 delegate
-  ("mm-hm" → ack)      (ME2 top-10 smart-home)     (OnIt harness, black box)
+  ("mm-hm" → ack)      (ME2 top-10 smart-home)     (OnIt → Pipecat, black box)
         │                      │                          │
         └──────────┬───────────┴──────────────────────────┘
                    ▼
@@ -33,7 +33,8 @@ mic ─▶ VAD (Silero) ─▶ ASR (whisper.cpp, local) ─▶ router (brain.py)
 | 5 | Half-duplex loop + timeline logging | `src/voiceduplex/loop/` |
 | 6 | Full-duplex: barge-in + backchannel | `src/voiceduplex/loop/full_duplex.py` |
 | 7 | Quick tools (smart-home intents) | `src/voiceduplex/smarthome/` |
-| 8 | Delegation to OnIt (persistent worker) | `src/voiceduplex/delegate/` |
+| 8 | Delegation — OnIt (primary) + Pipecat (backup) | `src/voiceduplex/delegate/`, `onit/` |
+| 11 | Localhost web UI (mic + task sims + live output) | `web/` |
 
 ## Layout
 
@@ -51,6 +52,12 @@ ME3/
 │   ├── offline_full_check.py   # offline health check (no mic/network)
 │   ├── live_capability_test.py # scripted live capability test
 │   └── download_model.sh, setup_kokoro.sh
+├── onit/                       # Step 8 agent-harness workers
+│   ├── onit_worker.py          #   OnIt (PRIMARY) persistent worker
+│   └── pipecat_worker.py       #   Pipecat (BACKUP) worker, same protocol
+├── web/                        # Step 11 localhost UI (wraps the real loop)
+│   ├── server.py               #   runs the loop + mirrors it to localhost
+│   └── index.html              #   mic viz, task sims, live transcript
 ├── models/                     # whisper + kokoro weights (NOT committed)
 ├── data/                       # runtime artifacts (NOT committed)
 └── requirements.txt
@@ -79,27 +86,98 @@ python3.12 -m venv .venv-kokoro
 ./scripts/setup_kokoro.sh
 ```
 
-## Run
+## Testing & running (the four entrypoints)
+
+All commands run from the repo root. `PYTHONPATH=src` puts the `voiceduplex`
+package on the path. Pick the interpreter that has the deps — on this Mac that's
+the conda base python (`/opt/miniconda3/bin/python3`); a plain `python3` works in
+an interactive shell but a background launcher may pick a different one.
+
+### 1. Offline health check — no mic, no network
+
+Proves every layer is wired (VAD, ASR, TTS, router, delegate) using synthetic
+audio. Run this first after any change; it's the fastest way to catch a broken
+import or a missing model.
 
 ```bash
-# offline health check — proves VAD/ASR/TTS/router/delegate are wired
 PYTHONPATH=src python3 scripts/offline_full_check.py
-
-# live full-duplex conversation (Ctrl-C stops everything, incl. the OnIt worker)
-PYTHONPATH=src python3 scripts/run_full_duplex.py
-
-# scripted live capability test (room-tone pre-check + scored steps)
-PYTHONPATH=src python3 scripts/live_capability_test.py
 ```
 
-## Step 8 — OnIt delegation
+### 2. Live full-duplex — the product (live mic)
 
-Anything that isn't a backchannel or a quick-tool intent is handed to **OnIt**
-as a black box. ME3 measures turnaround / keep-alive / result-back — never the
-harness internals.
+Real-time conversation with barge-in + backchannel. **Ctrl-C** stops everything,
+including the OnIt/Pipecat worker.
 
-- **Persistent worker** (default): one warm OnIt process spawned on first use,
-  served over stdin/stdout. Subsequent tasks skip the cold boot (~25s → ~1s).
+```bash
+PYTHONPATH=src python3 scripts/run_full_duplex.py
+```
+
+Useful flags:
+
+```bash
+# swap engines without editing config
+PYTHONPATH=src python3 scripts/run_full_duplex.py --tts piper
+PYTHONPATH=src python3 scripts/run_full_duplex.py --vad webrtc
+PYTHONPATH=src python3 scripts/run_full_duplex.py --no-barge-in
+```
+
+### 3. Scripted live capability test (live mic, scored)
+
+Walks through the six capabilities (quick tool ×3, barge-in, backchannel,
+delegate) with a 15 s room-tone pre-check, then scores each step MATCH / GARBLED
+/ BLANK. Use `--skip-delegate` to avoid the ~25 s OnIt wait, or `--only` to run
+a single step.
+
+```bash
+PYTHONPATH=src python3 scripts/live_capability_test.py
+PYTHONPATH=src python3 scripts/live_capability_test.py --skip-delegate
+PYTHONPATH=src python3 scripts/live_capability_test.py --tts piper --only 4
+```
+
+> A majority of GARBLED/BLANK lines is a **mic/room** signature (self-interference
+> from the loudspeaker, background noise), not a model bug — the test says so
+> explicitly. Re-run with headphones or in a quieter room.
+
+### 4. Localhost web UI (live mic + task simulators)
+
+Wraps the **real** full-duplex loop and mirrors it to a browser page: live mic
+waveform + VAD meter, the agent state machine, transcript/route/reply, barge-in
+and backchannel events, ME2-style task simulators (lights, music, thermostat,
+timers, math), and a terminal-output mirror. It is **non-invasive** — the loop's
+terminal output is unchanged and still printed to stdout; the server only
+*observes* it via an optional `event_cb` (default `None`, so `run_full_duplex.py`
+behaves byte-for-byte as before).
+
+```bash
+PYTHONPATH=src python3 web/server.py
+# then open  http://localhost:8321   (WebSocket on ws://localhost:8322)
+```
+
+Flags: `--port`, `--ws-port`, `--vad {silero,webrtc}`, `--tts {kokoro,piper}`,
+`--no-barge-in`, `--log`. Requires `websockets` (already in the env).
+
+## Step 8 — Delegation (OnIt primary + Pipecat backup)
+
+Anything that isn't a backchannel or a quick-tool intent is handed to an agent
+harness as a black box. ME3 measures turnaround / keep-alive / result-back —
+never the harness internals. There are **two interchangeable harnesses** behind
+one interface (`delegate/__init__.py`), both speaking the same line-oriented
+stdin/stdout worker protocol:
+
+- **OnIt** (PRIMARY) — `onit/onit_worker.py`, runs in the isolated `onit-venv`
+  (3.12) against your own vLLM / OpenAI-compatible endpoint.
+- **Pipecat** (BACKUP) — `onit/pipecat_worker.py`, in the **same** `onit-venv`.
+  Two tiers, chosen automatically: (1) a real Pipecat LLM pipeline if `pipecat`
+  is importable, else (2) a zero-dependency direct OpenAI-compatible call — so
+  the backup never hard-fails.
+
+With `backend: fallback` (the default), the loop tries **OnIt** first and, on
+*any* failure (endpoint unset, worker dies on boot, timeout, task error),
+transparently retries on **Pipecat**. The loop sees one backend and never knows
+which harness answered.
+
+- **Persistent worker** (default): one warm process spawned on first use, served
+  over stdin/stdout. Subsequent tasks skip the cold boot (~25s → ~1s).
 - **Kill on interrupt**: `FullDuplexLoop.stop()` tears down the worker, so
   Ctrl-C leaves no orphan processes.
 - **Offline fallback**: set `delegate.backend: stub` for a canned reply with no
@@ -109,21 +187,28 @@ Configure in `config/config.yaml`:
 
 ```yaml
 delegate:
-  backend: onit            # onit | stub
+  backend: fallback        # onit | pipecat | fallback | stub
+  primary: onit            # first harness to try
+  backup: pipecat          # second harness, used when primary fails
   mode: persistent         # persistent | oneshot
   python: /path/to/onit-venv/bin/python
   worker: /path/to/onit_worker.py
+  pipecat_worker: /path/to/pipecat_worker.py
   wait_sec: 120
   boot_timeout: 120
 ```
 
-> **Security note:** the OnIt API key is stored in the OS keychain (via
-> `onit setup`), **never** in this repo. Point the worker at your own
-> OpenAI-compatible / vLLM endpoint.
+> **Security note:** endpoint URLs and keys are supplied via the environment
+> (`ONIT_HOST`, `PIPECAT_HOST`, `OPENAI_API_KEY`), **never** in this repo. The
+> OnIt key also lives in the OS keychain (via `onit setup`). Point each worker
+> at your own OpenAI-compatible / vLLM endpoint.
 
 ## Notes
 
 - All local + offline (VAD, ASR, TTS, routing) — no cloud dependency for the
   core loop. Only Step 8 delegation calls an external model endpoint.
+- The Step 11 web UI is a thin observer over the real loop (`web/server.py`);
+  it adds no pipeline logic and leaves `run_full_duplex.py` unchanged. It needs
+  `websockets` in the env.
 - Porting Mac → Pi: change `audio.backend` and the model paths in
   `config/config.yaml`; no code changes.

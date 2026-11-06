@@ -35,5 +35,22 @@ soundfile>=0.12            # WAV I/O in the TTS test harness
 # On the Pi: recreate .venv-kokoro with the Pi's python3.12 (aarch64 wheels for
 # onnxruntime exist), copy the two model files, and set tts.kokoro_python.
 
+# --- Agent harness / delegate (Step 8) ---
+# Two interchangeable backends behind one interface (delegate/__init__.py):
+#   OnIt     (PRIMARY)  -> onit/onit_worker.py, runs in the `onit-venv` 3.12 env
+#   Pipecat  (BACKUP)   -> onit/pipecat_worker.py, SAME `onit-venv` (alongside OnIt)
+# Config: delegate.backend: fallback  (primary: onit, backup: pipecat)
+#
+# Pipecat lives in the ISOLATED `onit-venv` (3.12), NOT the main 3.14 env —
+# it is installed there so it sits next to OnIt and shares one interpreter:
+#   onit-venv/bin/python -m pip install -U "pipecat-ai==1.15.0"
+# Pinned to 1.15.0: the worker's tier-1 path uses the 1.15 API
+# (await llm.run_inference(LLMContext(...))). pipecat 2.0 changes the
+# constructor/settings shape and needs a small code update.
+# If pipecat is absent the worker degrades to tier 2 (zero-dep direct
+# OpenAI-compatible call), so the backup never hard-fails.
+# (Not listed as a bare requirement here because it is venv-isolated, like
+#  kokoro-onnx above — see the setup line.)
+
 # --- used only by the test-harness scripts, not the runtime pipeline ---
 scipy>=1.11                # resampling in test fixtures

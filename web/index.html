@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ME3 · Full-Duplex Voice Console</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#121826; --panel2:#0e1420; --line:#1e2740;
+    --txt:#e6ecf7; --dim:#8493b3; --accent:#4f9cff; --good:#37d39a;
+    --warn:#ffb454; --bad:#ff5c7a; --purple:#a78bfa; --cyan:#39d0d8;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#16203a 0%,var(--bg) 55%);
+       color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  header{display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid var(--line);}
+  .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--purple));
+        display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;}
+  h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.2px}
+  .sub{font-size:12px;color:var(--dim)}
+  .pill{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:12px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--dim)}
+  .dot.on{background:var(--good);box-shadow:0 0 10px var(--good)}
+  .dot.live{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;padding:16px 22px;max-width:1500px;margin:0 auto;}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;}
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:0 0 12px;font-weight:700}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .col{display:flex;flex-direction:column;gap:14px}
+  /* state */
+  .states{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .st{padding:10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);text-align:center;
+      font-size:12px;color:var(--dim);transition:.15s}
+  .st.active{color:#fff;border-color:transparent;transform:translateY(-1px)}
+  .st.listening.active{background:rgba(79,156,255,.18);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .st.thinking.active{background:rgba(167,139,250,.18);color:var(--purple);box-shadow:0 0 0 1px var(--purple) inset}
+  .st.speaking.active{background:rgba(55,211,154,.18);color:var(--good);box-shadow:0 0 0 1px var(--good) inset}
+  .st.idle.active{background:rgba(132,147,179,.16);color:var(--dim)}
+  /* mic */
+  #wave{width:100%;height:120px;display:block;background:var(--panel2);border-radius:10px;border:1px solid var(--line)}
+  .mics{display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--dim)}
+  .meter{flex:1;height:8px;background:#0a0e16;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+  .meter>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--cyan));transition:width .08s linear}
+  .meter.vad>i{background:linear-gradient(90deg,var(--purple),var(--pink,#ff5c7a))}
+  /* transcript */
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .kv:last-child{border-bottom:0}
+  .kv .k{color:var(--dim);flex-shrink:0}
+  .kv .v{font-family:var(--mono);text-align:right;word-break:break-word}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+  .tag.quick_tool{background:rgba(55,211,154,.18);color:var(--good)}
+  .tag.delegate{background:rgba(79,156,255,.18);color:var(--accent)}
+  .tag.backchannel{background:rgba(255,180,84,.18);color:var(--warn)}
+  .tag.other{background:rgba(132,147,179,.16);color:var(--dim)}
+  /* feed + terminal */
+  .feed{height:150px;overflow-y:auto;font-size:12px;display:flex;flex-direction:column;gap:5px}
+  .feed .ev{padding:5px 8px;border-radius:7px;background:var(--panel2);border-left:3px solid var(--line)}
+  .feed .ev b{font-family:var(--mono);font-size:11px}
+  .feed .ev.evt{border-left-color:var(--accent)}
+  .feed .ev.bar{border-left-color:var(--bad)}
+  .feed .ev.bc{border-left-color:var(--warn)}
+  .term{height:170px;overflow-y:auto;background:#070a10;border-radius:10px;border:1px solid var(--line);
+        padding:10px;font-family:var(--mono);font-size:11.5px;line-height:1.55;color:#9fb3d1;white-space:pre-wrap;word-break:break-word}
+  .term .ln.warn{color:var(--warn)} .term .ln.err{color:var(--bad)} .term .ln.ok{color:var(--good)}
+  /* simulators */
+  .sim{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.sim{grid-template-columns:1fr}}
+  .sim .box{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px}
+  .sim .box h3{margin:0 0 10px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:7px}
+  .sim .box h3 .ico{font-size:15px}
+  button{cursor:pointer;border:1px solid var(--line);background:#1a2336;color:var(--txt);border-radius:8px;
+         padding:7px 10px;font-size:12px;transition:.12s}
+  button:hover{background:#233150;border-color:var(--accent)}
+  button:active{transform:translateY(1px)}
+  button.primary{background:linear-gradient(135deg,var(--accent),#3b7fe0);border-color:transparent;color:#fff;font-weight:600}
+  .btnrow{display:flex;flex-wrap:wrap;gap:6px}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .swatch{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:5px;border:1px solid rgba(255,255,255,.2)}
+  .num{font-family:var(--mono);color:var(--cyan);font-weight:700}
+  .lamp{width:100%;height:46px;border-radius:9px;background:#0a0e16;border:1px solid var(--line);
+        display:grid;place-items:center;font-size:12px;color:var(--dim);margin-bottom:10px;transition:.2s}
+  .lamp.on{background:radial-gradient(circle at 50% 40%,rgba(255,240,180,.5),rgba(255,200,80,.12) 70%);color:#ffe9a8;border-color:rgba(255,210,120,.4)}
+  .resp{margin-top:10px;font-size:12px;color:var(--good);min-height:16px;font-family:var(--mono)}
+  select,input[type=text]{background:#0a0e16;border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:6px 8px;font-size:12px;width:100%}
+  label.f{font-size:11px;color:var(--dim);display:block;margin:8px 0 4px}
+  .devstat{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chip{font-size:11px;font-family:var(--mono);background:#0a0e16;border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:var(--dim)}
+  .chip b{color:var(--txt)}
+  footer{padding:10px 22px 24px;color:var(--dim);font-size:11px;text-align:center}
+  a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">M3</div>
+  <div>
+    <h1>ME3 · Full-Duplex Voice Console</h1>
+    <div class="sub">Live mirror of the terminal loop · mic stays hot while the agent talks</div>
+  </div>
+  <div class="pill">
+    <span class="dot" id="wsdot"></span><span id="wstxt">connecting…</span>
+    <span style="color:var(--dim)">·</span>
+    <span id="clock">00:00</span>
+  </div>
+</header>
+
+<div class="grid">
+  <!-- LEFT: live voice -->
+  <div class="col">
+    <div class="card">
+      <h2>Agent State</h2>
+      <div class="states">
+        <div class="st listening" id="st-listening">🎤 Listening</div>
+        <div class="st thinking" id="st-thinking">🧠 Thinking</div>
+        <div class="st speaking" id="st-speaking">🔊 Speaking</div>
+        <div class="st idle" id="st-idle">💤 Idle</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Microphone</h2>
+      <canvas id="wave"></canvas>
+      <div class="mics">
+        <div style="flex:1">
+          <div style="margin-bottom:5px">Level <span class="num" id="lvl">0</span></div>
+          <div class="meter"><i id="lvlbar"></i></div>
+        </div>
+        <div style="flex:1">
+          <div style="margin-bottom:5px">VAD score <span class="num" id="scrv">0.00</span></div>
+          <div class="meter vad"><i id="scrbar"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Last Turn</h2>
+      <div class="kv"><span class="k">Heard</span><span class="v" id="heard">—</span></div>
+      <div class="kv"><span class="k">Route</span><span class="v"><span class="tag other" id="route">—</span></span></div>
+      <div class="kv"><span class="k">Reply</span><span class="v" id="reply">—</span></div>
+      <div class="kv"><span class="k">TTFA / ASR / Route</span><span class="v" id="lat">—</span></div>
+      <div class="kv"><span class="k">Barge-in</span><span class="v" id="bar">—</span></div>
+      <div class="kv"><span class="k">Backchannel</span><span class="v" id="bc">—</span></div>
+      <div class="kv"><span class="k">Turn #</span><span class="v num" id="turn">0</span></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: feed + terminal -->
+  <div class="col">
+    <div class="card">
+      <h2>Event Feed</h2>
+      <div class="feed" id="feed"></div>
+    </div>
+    <div class="card">
+      <h2>Terminal Output <span style="float:right;font-weight:400;text-transform:none;letter-spacing:0">(mirror of CLI)</span></h2>
+      <div class="term" id="term"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIMULATORS -->
+<div class="grid" style="padding-top:0">
+  <div class="card">
+    <h2>ME2 Task Simulators <span style="float:right;font-weight:400;text-transform:none;letter-spacing:0">drive the smart-home device</span></h2>
+    <div class="sim">
+      <!-- Lights -->
+      <div class="box">
+        <h3><span class="ico">💡</span>Lights</h3>
+        <div class="lamp" id="lamp">off</div>
+        <div class="btnrow" style="margin-bottom:8px">
+          <button class="primary" onclick="dev('light_on')">On</button>
+          <button onclick="dev('light_off')">Off</button>
+        </div>
+        <label class="f">Brightness <span class="num" id="brv">100</span>%</label>
+        <input type="range" min="0" max="100" value="100" id="bright" oninput="brv.textContent=this.value">
+        <label class="f">Color</label>
+        <div class="btnrow">
+          <button onclick="dev('color','red')"><span class="swatch" style="background:#ff5c5c"></span>Red</button>
+          <button onclick="dev('color','blue')"><span class="swatch" style="background:#4f9cff"></span>Blue</button>
+          <button onclick="dev('color','green')"><span class="swatch" style="background:#37d39a"></span>Green</button>
+          <button onclick="dev('color','white')"><span class="swatch" style="background:#fff"></span>White</button>
+        </div>
+        <div class="resp" id="r-light"></div>
+      </div>
+      <!-- Thermostat -->
+      <div class="box">
+        <h3><span class="ico">🌡️</span>Thermostat</h3>
+        <div class="lamp" id="thermo">24°C</div>
+        <div class="btnrow" style="margin-bottom:8px">
+          <button onclick="dev('temp','22')">22°</button>
+          <button onclick="dev('temp','24')">24°</button>
+          <button onclick="dev('temp','26')">26°</button>
+          <button onclick="dev('temp','28')">28°</button>
+        </div>
+        <label class="f">Custom setpoint (°C)</label>
+        <input type="text" id="tmpin" placeholder="e.g. 25" onkeydown="if(event.key==='Enter')dev('temp',tmpin.value)">
+        <div class="resp" id="r-temp"></div>
+      </div>
+      <!-- Music -->
+      <div class="box">
+        <h3><span class="ico">🎵</span>Music</h3>
+        <div class="lamp" id="musictag">stopped</div>
+        <div class="btnrow" style="margin-bottom:8px">
+          <button class="primary" onclick="dev('music_play')">▶ Play</button>
+          <button onclick="dev('music_pause')">⏸ Pause</button>
+          <button onclick="dev('music_resume')">Resume</button>
+          <button onclick="dev('music_next')">⏭ Next</button>
+          <button onclick="dev('music_stop')">⏹ Stop</button>
+        </div>
+        <label class="f">Volume</label>
+        <div class="btnrow">
+          <button onclick="dev('vol_up')">Vol +</button>
+          <button onclick="dev('vol_down')">Vol −</button>
+          <span class="chip" id="volchip">50</span>
+        </div>
+        <div class="resp" id="r-music"></div>
+      </div>
+      <!-- Timers / reminders -->
+      <div class="box">
+        <h3><span class="ico">⏱️</span>Timers & Reminders</h3>
+        <label class="f">Timer (seconds)</label>
+        <div class="btnrow" style="margin-bottom:8px">
+          <button onclick="dev('timer','10 seconds')">10s</button>
+          <button onclick="dev('timer','30 seconds')">30s</button>
+          <button onclick="dev('timer','1 minute')">1m</button>
+        </div>
+        <label class="f">Reminder</label>
+        <input type="text" id="remindin" placeholder="e.g. call mom" onkeydown="if(event.key==='Enter')dev('reminder',remindin.value)">
+        <div class="btnrow" style="margin-top:6px">
+          <button onclick="dev('reminder',remindin.value)">Add</button>
+          <button onclick="dev('list_reminders')">List</button>
+        </div>
+        <div class="resp" id="r-timer"></div>
+      </div>
+      <!-- Clock / weather -->
+      <div class="box">
+        <h3><span class="ico">🕒</span>Clock & Weather</h3>
+        <div class="btnrow" style="margin-bottom:8px">
+          <button class="primary" onclick="dev('time')">What time?</button>
+          <button onclick="dev('date')">What date?</button>
+        </div>
+        <label class="f">Weather city</label>
+        <input type="text" id="cityin" value="Metro Manila" onkeydown="if(event.key==='Enter')dev('weather',cityin.value)">
+        <div class="btnrow" style="margin-top:6px">
+          <button onclick="dev('weather',cityin.value)">Get forecast</button>
+        </div>
+        <div class="resp" id="r-weather"></div>
+      </div>
+      <!-- Math -->
+      <div class="box">
+        <h3><span class="ico">🧮</span>Quick Math</h3>
+        <label class="f">Expression</label>
+        <input type="text" id="mathin" placeholder="e.g. 12 * 8 + 5" onkeydown="if(event.key==='Enter')dev('math',mathin.value)">
+        <div class="btnrow" style="margin-top:6px">
+          <button class="primary" onclick="dev('math',mathin.value)">Solve</button>
+          <button onclick="dev('math','12 * 8')">12×8</button>
+          <button onclick="dev('math','(3.5 + 1.5) * 2')">(3.5+1.5)×2</button>
+        </div>
+        <div class="resp" id="r-math"></div>
+      </div>
+    </div>
+    <div class="devstat" id="devstat"></div>
+  </div>
+
+  <!-- device event log -->
+  <div class="card">
+    <h2>Device Activity Log</h2>
+    <div class="term" id="devlog" style="height:360px"></div>
+  </div>
+</div>
+
+<footer>
+  ME3 full-duplex voice · web mirror only — the terminal loop keeps running and printing unchanged.
+  Routes: <span class="tag quick_tool">quick_tool</span> <span class="tag delegate">delegate</span> <span class="tag backchannel">backchannel</span>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let ws, wsRetry = 0, hist = [];
+
+// ---- websocket live channel ----------------------------------------------
+function connect(){
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const port = 8322;
+  ws = new WebSocket(`${proto}://127.0.0.1:${port}`);
+  ws.onopen = () => { wsRetry = 0; $('wsdot').className = 'dot on'; $('wstxt').textContent = 'live'; };
+  ws.onclose = () => {
+    $('wsdot').className = 'dot'; $('wstxt').textContent = 'reconnecting…';
+    setTimeout(connect, Math.min(5000, 500 * ++wsRetry));
+  };
+  ws.onerror = () => ws.close();
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.op === 'snapshot'){ applySnapshot(m); }
+    else if (m.op === 'event'){ applyEvent(m.ev); }
+  };
+}
+
+function applySnapshot(m){
+  setState(m.state);
+  $('heard').textContent = m.last_heard || '—';
+  setRoute(m.last_route);
+  $('reply').textContent = m.last_reply || '—';
+  setLat(m.last_ttfa_ms, m.last_asr_ms, m.last_route_ms);
+  $('bar').textContent = m.last_interrupt || '—';
+  $('bc').textContent = m.last_backchannel || '—';
+  $('turn').textContent = m.turn;
+  hist = m.log || [];
+  renderTerm();
+  histEv = m.events || [];
+  renderFeed();
+  refreshDevice();
+}
+
+function applyEvent(ev){
+  const k = ev.kind;
+  if (k === 'state') setState(ev.payload);
+  else if (k === 'heard'){ $('heard').textContent = ev.text || '—'; }
+  else if (k === 'route'){ setRoute(ev.route); }
+  else if (k === 'reply'){ $('reply').textContent = ev.text || '—'; }
+  else if (k === 'turn_done'){ $('turn').textContent = ev.turn; setLat(ev.ttfa_ms, ev.asr_ms, ev.route_ms); }
+  else if (k === 'interrupt'){ $('bar').textContent = ev.text; }
+  else if (k === 'backchannel'){ $('bc').textContent = ev.text; }
+  else if (k === 'log'){ hist.push(ev.payload); if(hist.length>400)hist.shift(); renderTerm(); }
+  else { histEv.push(ev); if(histEv.length>200)histEv.shift(); renderFeed(); }
+}
+
+function setState(s){
+  ['listening','thinking','speaking','idle'].forEach(x=>$('st-'+x).classList.remove('active'));
+  const map = {ready:'idle',stopped:'idle',loading:'idle'};
+  s = map[s] || s;
+  const el = $('st-'+s); if (el) el.classList.add('active');
+}
+function setRoute(r){
+  const el = $('route'); el.textContent = r || '—';
+  el.className = 'tag ' + (['quick_tool','delegate','backchannel'].includes(r)?r:'other');
+}
+function setLat(a,b,c){
+  $('lat').textContent = (a==null&&b==null&&c==null) ? '—' :
+    `TTFA ${a??'—'}ms · ASR ${b??'—'}ms · route ${c??'—'}ms`;
+}
+
+// ---- terminal mirror ------------------------------------------------------
+function cls(line){
+  if (/error|fail|warning|warn|⚠|missing/i.test(line)) return line.toLowerCase().includes('error')||/fail|missing/i.test(line)?'err':'warn';
+  if (/✔|ready|ok|done/i.test(line)) return 'ok';
+  return '';
+}
+function renderTerm(){
+  const t = $('term');
+  t.innerHTML = hist.slice(-200).map(l=>`<div class="ln ${cls(l)}">${esc(l)}</div>`).join('');
+  t.scrollTop = t.scrollHeight;
+}
+let histEv = [];
+function renderFeed(){
+  const f = $('feed');
+  const order = [...histEv].reverse().slice(0,80);
+  f.innerHTML = order.map(ev=>{
+    let cls='evt', label=ev.kind, body='';
+    if (ev.kind==='heard'){ body=`“${esc(ev.text||'')}”`; }
+    else if (ev.kind==='route'){ body=ev.route+' · '+(ev.detail||''); }
+    else if (ev.kind==='reply'){ body=`“${esc(ev.text||'')}”`; }
+    else if (ev.kind==='barge_in'){ cls='bar'; body=`energy ${ev.energy}`; }
+    else if (ev.kind==='interrupt'){ cls='bar'; body=`“${esc(ev.text||'')}”`; }
+    else if (ev.kind==='backchannel'){ cls='bc'; body=`“${esc(ev.text||'')}” → resume`; }
+    else if (ev.kind==='turn_done'){ body=`TTFA ${ev.ttfa_ms??'—'}ms`; }
+    return `<div class="ev ${cls}"><b>${label}</b> ${body}</div>`;
+  }).join('');
+}
+
+// ---- mic visualizer -------------------------------------------------------
+const cv = $('wave'), ctx = cv.getContext('2d');
+let bars = new Array(48).fill(0);
+function resize(){ cv.width = cv.clientWidth * devicePixelRatio; cv.height = cv.clientHeight * devicePixelRatio; }
+window.addEventListener('resize', resize); resize();
+function drawWave(level, score){
+  // push a new sample, decay the rest
+  bars.shift();
+  bars.push(Math.min(1, level/32768) * (0.6 + 0.4*score));
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const n = bars.length, bw = cv.width/n;
+  for (let i=0;i<n;i++){
+    const v = bars[i];
+    const h = Math.max(2, v * cv.height * 0.92);
+    const x = i*bw, y = (cv.height-h)/2;
+    const g = ctx.createLinearGradient(0,y,0,y+h);
+    g.addColorStop(0,'#39d0d8'); g.addColorStop(1,'#4f9cff');
+    ctx.fillStyle = g;
+    ctx.globalAlpha = 0.35 + 0.65*v;
+    roundRect(ctx, x+bw*0.15, y, bw*0.7, h, 2);
+  }
+  ctx.globalAlpha = 1;
+  // idle shimmer
+  const t = performance.now()/600;
+  ctx.fillStyle = 'rgba(79,156,255,0.5)';
+  ctx.beginPath(); ctx.arc(cv.width-14, 14, 3+Math.sin(t)*1.5, 0, 7); ctx.fill();
+}
+function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();c.fill();}
+function loop(){
+  const lvl = parseFloat($('lvl').textContent)||0;
+  const scr = parseFloat($('scrv').textContent)||0;
+  drawWave(lvl, scr);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---- clock ----------------------------------------------------------------
+setInterval(()=>{
+  const s = Math.floor((Date.now()-startedAt)/1000);
+  $('clock').textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+},1000);
+let startedAt = Date.now();
+
+// ---- device simulators ----------------------------------------------------
+async function dev(action, arg=''){
+  try{
+    const r = await fetch('/api/device', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action, arg})});
+    const d = await r.json();
+    flashResp(action, d.response);
+    refreshDevice();
+    pushDevLog(`[${action}] ${arg||''} → ${d.response}`);
+  }catch(e){ flashResp(action, '⚠ '+e); }
+}
+function flashResp(action, msg){
+  const map = {light_on:'r-light',light_off:'r-light',brightness:'r-light',color:'r-light',
+    temp:'r-temp',music_play:'r-music',music_pause:'r-music',music_resume:'r-music',
+    music_stop:'r-music',music_next:'r-music',vol_up:'r-music',vol_down:'r-music',
+    timer:'r-timer',reminder:'r-timer',list_reminders:'r-timer',time:'r-weather',
+    date:'r-weather',weather:'r-weather',math:'r-math'};
+  const el = $(map[action]||'r-math');
+  el.textContent = msg;
+  clearTimeout(el._t); el._t = setTimeout(()=>el.textContent='', 6000);
+}
+async function refreshDevice(){
+  try{
+    const r = await fetch('/api/device'); const d = await r.json(); const s = d.state;
+    // lights
+    const lamp = $('lamp');
+    lamp.className = 'lamp' + (s.lights_on?' on':'');
+    lamp.textContent = s.lights_on ? `on · ${s.brightness}% · ${s.color}` : 'off';
+    $('brv').textContent = s.brightness; $('bright').value = s.brightness;
+    // thermo
+    $('thermo').textContent = s.temperature_c + '°C';
+    $('thermo').className = 'lamp' + (s.temperature_c>=26?' on':'');
+    // music
+    const mt = s.music;
+    $('musictag').textContent = mt.playing ? `▶ ${mt.track||'playing'}` : (mt.paused?'⏸ paused':'stopped');
+    $('musictag').className = 'lamp' + (mt.playing?' on':'');
+    $('volchip').textContent = 'vol '+s.volume;
+    // chips
+    const chips = [];
+    chips.push(`<span class="chip">lights <b>${s.lights_on?'on':'off'}</b></span>`);
+    chips.push(`<span class="chip">temp <b>${s.temperature_c}°C</b></span>`);
+    chips.push(`<span class="chip">music <b>${mt.playing?'playing':(mt.paused?'paused':'stopped')}</b></b></span>`);
+    chips.push(`<span class="chip">timers <b>${Object.keys(s.timers).length}</b></span>`);
+    chips.push(`<span class="chip">alarms <b>${Object.keys(s.alarms).length}</b></span>`);
+    chips.push(`<span class="chip">reminders <b>${s.reminders.length}</b></span>`);
+    $('devstat').innerHTML = chips.join('');
+    renderDevLog(d.events);
+  }catch(e){}
+}
+function renderDevLog(events){
+  const el = $('devlog');
+  el.innerHTML = (events||[]).slice(-120).map(l=>`<div class="ln">${esc(l)}</div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function pushDevLog(line){
+  const el = $('devlog');
+  el.innerHTML += `<div class="ln ok">${esc(line)}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function esc(s){ return String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+connect();
+setInterval(refreshDevice, 2500);
+refreshDevice();
+</script>
+</body>
+</html>

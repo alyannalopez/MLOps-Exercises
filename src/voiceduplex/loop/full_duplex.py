@@ -45,7 +45,7 @@ import queue
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 
@@ -91,13 +91,14 @@ class ListenerThread(threading.Thread):
 
     def __init__(self, audio: AudioIO, vad: VAD,
                  barge_evt: threading.Event, stop_evt: threading.Event,
-                 t_origin: float) -> None:
+                 t_origin: float, event_cb=None) -> None:
         super().__init__(daemon=True, name="listener")
         self.audio = audio
         self.vad = vad
         self.barge_evt = barge_evt
         self.stop_evt = stop_evt
         self.t_origin = t_origin
+        self.event_cb = event_cb
         self.utterances: "queue.Queue[Utterance]" = queue.Queue(maxsize=32)
         self._speaking_since: Optional[float] = None
         self._buf: list[np.ndarray] = []
@@ -111,6 +112,17 @@ class ListenerThread(threading.Thread):
                 continue
             now = time.monotonic() - self.t_origin
             state, event = self.vad.process(frame.pcm)
+            # Observer-only: expose live mic level + VAD score for the web UI.
+            # Read-only -- does not alter VAD state or capture.
+            if self.event_cb is not None:
+                try:
+                    amp = float(np.max(np.abs(frame.pcm))) if len(frame.pcm) else 0.0
+                    sf = getattr(self.vad, "_score", None)
+                    score = float(sf(frame.pcm)) if callable(sf) else 0.0
+                    self.event_cb("mic", {"level": amp, "score": score,
+                                          "speaking": bool(state)})
+                except Exception:  # noqa: BLE001
+                    pass
             if event == "speech_start":
                 self._speaking_since = now
                 self._buf = [frame.pcm]
@@ -162,12 +174,19 @@ class FullDuplexLoop:
         verbose: bool = True,
         delegate: Optional[DelegateBackend] = None,
         delegate_wait_sec: float = 120.0,
+        event_cb: Optional[Callable[[str, object], None]] = None,
     ) -> None:
         self.audio = audio
         self.vad = vad
         self.asr = asr
         self.tts = tts
         self.log = log
+        # Optional observer (web UI / live test). Called as event_cb(kind, payload)
+        # on state changes. When None (the default) the loop behaves exactly as
+        # before -- run_full_duplex.py is unaffected.
+        self.event_cb = event_cb
+        self._listening = False
+        self._thinking = False
 
         self.max_utterance_frames = int(max_utterance_sec * audio.SAMPLE_RATE / audio.BLOCK)
         self.max_utterance_sec = max_utterance_sec
@@ -193,9 +212,20 @@ class FullDuplexLoop:
         self._last_interrupt: str = ""
 
     # ------------------------------------------------------------------
+    def _emit(self, kind: str, payload: object = None) -> None:
+        """Notify the optional observer. Never raises, never blocks the loop."""
+        cb = self.event_cb
+        if cb is None:
+            return
+        try:
+            cb(kind, payload)
+        except Exception:  # noqa: BLE001 - observer must never break the loop
+            pass
+
     def _log(self, msg: str) -> None:
         if self.verbose:
             print(msg, flush=True)
+        self._emit("log", msg)
 
     def run(self) -> None:
         self._running = True
@@ -207,7 +237,8 @@ class FullDuplexLoop:
         self._log("To just ACKNOWLEDGE (not interrupt), say 'yeah'/'mm-hm' while I talk.\n")
 
         self._listener = ListenerThread(self.audio, self.vad,
-                                        self._barge_evt, self._stop, self._t_origin)
+                                        self._barge_evt, self._stop, self._t_origin,
+                                        event_cb=self.event_cb)
         self._listener.start()
         try:
             while self._running:
@@ -254,6 +285,8 @@ class FullDuplexLoop:
         # Wait for a captured utterance from the listener FIFO.
         utt: Optional[Utterance] = None
         waited = 0.0
+        self._listening = True
+        self._emit("state", "listening")
         while self._running and utt is None:
             utt = self._listener.get_utterance(timeout=0.05)
             if utt is None:
@@ -261,8 +294,13 @@ class FullDuplexLoop:
                 if waited > 60.0:  # safety: don't spin forever in tests
                     return
         if utt is None:
+            self._listening = False
+            self._emit("state", "idle")
             return
 
+        self._listening = False
+        self._thinking = True
+        self._emit("state", "thinking")
         self._turn += 1
         tl = Timeline(turn_id=self._turn, t_origin=time.monotonic())
         tl.T0_user_speech_start = 0.0
@@ -277,6 +315,8 @@ class FullDuplexLoop:
             return
         tl.stamp("T2_asr_final")
         tl.transcript = tr.text
+        self._emit("heard", {"turn": tl.turn_id, "text": tr.text,
+                             "asr_ms": round(tr.duration_compute * 1000, 1)})
         self._log(f"[{tl.turn_id}] 📝 heard: “{tr.text}”  (ASR {tr.duration_compute:.2f}s, RTF {tr.rtf:.2f})")
 
         decision = route(tr.text, delegate=self.delegate)
@@ -284,6 +324,8 @@ class FullDuplexLoop:
         tl.route = decision.route
         tl.reply = decision.reply
         self._last_heard = (tr.text, decision.route, decision.reply)
+        self._emit("route", {"turn": tl.turn_id, "route": decision.route,
+                             "detail": decision.detail})
         self._log(f"[{tl.turn_id}] 🧠 route={decision.route:<12} ({decision.detail})")
 
         self._speak_reply(tl, decision.reply)
@@ -311,7 +353,10 @@ class FullDuplexLoop:
         self._log(f"[{tl.turn_id}] 🔊 speaking: “{reply}”  (TTS {synth.duration_compute:.2f}s, RTF {synth.rtf:.2f})")
 
         self._playing = True
+        self._thinking = False
         self._barge_evt.clear()
+        self._emit("state", "speaking")
+        self._emit("reply", {"turn": tl.turn_id, "text": reply})
         interrupted = self._play_with_barge_in(out)
         self._playing = False
 
@@ -321,6 +366,11 @@ class FullDuplexLoop:
             self._handle_interrupt(tl)
         tl.stamp("T8_turn_complete")
         lat = tl.latencies_ms()
+        self._emit("turn_done", {"turn": tl.turn_id,
+                                 "ttfa_ms": lat.get("A4_TTFA"),
+                                 "asr_ms": lat.get("A2_L_asr"),
+                                 "route_ms": lat.get("A3_L_route"),
+                                 "interrupted": bool(interrupted)})
         self._log(f"[{tl.turn_id}] ✔ turn done — TTFA={lat['A4_TTFA']}ms  ASR={lat['A2_L_asr']}ms  "
                   f"route={lat['A3_L_route']}ms\n")
         self.log.record(tl)
@@ -397,6 +447,9 @@ class FullDuplexLoop:
             self._log(f"[bc] faint overlap (energy {utt.energy:.0f}) -> ignoring")
             return
 
+        self._emit("barge_in", {"energy": round(utt.energy, 1),
+                                "during": "speaking"})
+
         self._turn += 1
         tl = Timeline(turn_id=self._turn, t_origin=time.monotonic())
         tl.T0_user_speech_start = 0.0
@@ -415,6 +468,7 @@ class FullDuplexLoop:
         tl.transcript = text
 
         if verdict == "backchannel" and self.backchannel_during_speech:
+            self._emit("backchannel", {"text": text, "action": "resume"})
             self._log(f"[bc] backchannel: “{text}” -> acknowledging, resuming")
             tl.route = "backchannel_resume"
             tl.reply = "(acknowledged, resuming)"
@@ -424,6 +478,7 @@ class FullDuplexLoop:
             return
 
         self._log(f"[⚡ barge-in] interrupt: “{text}” -> responding")
+        self._emit("interrupt", {"text": text})
         self._last_interrupt = text
         decision = route(text, delegate=self.delegate)
         tl.stamp("O2_agent_reaction")
