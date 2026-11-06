@@ -167,19 +167,28 @@ HUB = Hub()
 # Model loading (mirrors scripts/run_full_duplex.py exactly)
 # ---------------------------------------------------------------------------
 def _make_tts(backend: str, tcfg: dict, root: Path):
-    if backend == "piper":
-        return make_tts(
-            "piper",
-            model=str(root / tcfg.get("piper_model", "data/voices/en_US-lessac-medium.onnx")),
-            speed=float(tcfg.get("speed", 1.0)),
-        )
-    return make_tts(
-        "kokoro",
+    piper_kw = dict(
+        model=str(root / tcfg.get("piper_model", "data/voices/en_US-lessac-medium.onnx")),
+        speed=float(tcfg.get("speed", 1.0)),
+    )
+    kokoro_kw = dict(
         python=str(root / tcfg.get("kokoro_python", ".venv-kokoro/bin/python")),
         model=str(root / tcfg.get("kokoro_model", "models/kokoro-v1.0.onnx")),
         voices=str(root / tcfg.get("kokoro_voices", "models/voices-v1.0.bin")),
         voice=tcfg.get("voice", "af_heart"),
         speed=float(tcfg.get("speed", 1.0)),
+    )
+    if backend == "piper":
+        return make_tts("piper", **piper_kw)
+    if backend == "kokoro":
+        return make_tts("kokoro", **kokoro_kw)
+    # fallback: primary (default piper) with automatic backup (default kokoro)
+    return make_tts(
+        "fallback",
+        primary=tcfg.get("primary", "piper"),
+        backup=tcfg.get("backup", "kokoro"),
+        primary_kwargs=piper_kw if tcfg.get("primary", "piper") == "piper" else kokoro_kw,
+        backup_kwargs=kokoro_kw if tcfg.get("backup", "kokoro") == "kokoro" else piper_kw,
     )
 
 
@@ -213,7 +222,7 @@ def build_components(cfg: dict, args):
         threads=int(asrcfg.get("threads", 0)),
         beam_size=int(asrcfg.get("beam_size", 5)),
     )
-    tts = _make_tts(args.tts or tcfg.get("backend", "kokoro"), tcfg, ROOT)
+    tts = _make_tts(args.tts or tcfg.get("backend", "piper"), tcfg, ROOT)
 
     HUB._push_log(f"  VAD={vad.__class__.__name__}  ASR={asr.__class__.__name__}  "
                   f"TTS={tts.backend_name}   ({time.time()-t0:.1f}s)")
@@ -382,7 +391,7 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=8321)
     ap.add_argument("--ws-port", type=int, default=8322)
     ap.add_argument("--vad", choices=["silero", "webrtc"], default=None)
-    ap.add_argument("--tts", choices=["kokoro", "piper"], default=None)
+    ap.add_argument("--tts", choices=["kokoro", "piper", "fallback"], default=None)
     ap.add_argument("--no-barge-in", action="store_true")
     ap.add_argument("--log", default=str(ROOT / "data" / "timeline.jsonl"))
     args = ap.parse_args()

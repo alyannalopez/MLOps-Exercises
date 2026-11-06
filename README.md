@@ -3,8 +3,8 @@
 A real-time, **full-duplex** voice assistant: it listens and speaks at the same
 time, understands **barge-in** (interrupt it mid-sentence) vs **backchannel**
 ("mm-hm" while it talks → it keeps going), routes quick smart-home intents
-locally, and delegates anything harder to a black-box agent harness (**OnIt**,
-with **Pipecat** as an automatic backup) running on your own vLLM server.
+locally, and delegates anything harder to a black-box agent harness (**Pipecat**,
+with **OnIt** as an automatic backup) running on your own vLLM server.
 
 Built step-by-step (Steps 1–8 complete). See
 [`ME3 step-by-step implementation plan.md`](ME3%20step-by-step%20implementation%20plan.md).
@@ -17,11 +17,11 @@ mic ─▶ VAD (Silero) ─▶ ASR (whisper.cpp, local) ─▶ router (brain.py)
         ┌──────────────────────┬──────────────────────────┤
         ▼                      ▼                          ▼
   backchannel             quick_tool                 delegate
-  ("mm-hm" → ack)      (ME2 top-10 smart-home)     (OnIt → Pipecat, black box)
+  ("mm-hm" → ack)      (ME2 top-10 smart-home)     (Pipecat → OnIt, black box)
         │                      │                          │
         └──────────┬───────────┴──────────────────────────┘
                    ▼
-              TTS (Kokoro) ─▶ speaker        (full-duplex: barge-in aware)
+              TTS (Piper) ─▶ speaker        (full-duplex: barge-in aware)
 ```
 
 | Step | Component | Module |
@@ -29,11 +29,11 @@ mic ─▶ VAD (Silero) ─▶ ASR (whisper.cpp, local) ─▶ router (brain.py)
 | 1 | Audio I/O (Mac + Pi backends) | `src/voiceduplex/audioio/` |
 | 2 | VAD — Silero (primary), WebRTC (backup) | `src/voiceduplex/vad/` |
 | 3 | ASR — whisper.cpp (offline) | `src/voiceduplex/asr/` |
-| 4 | TTS — Kokoro (primary), Piper (backup) | `src/voiceduplex/tts/` |
+| 4 | TTS — Piper (primary, fast), Kokoro (backup, natural) | `src/voiceduplex/tts/` |
 | 5 | Half-duplex loop + timeline logging | `src/voiceduplex/loop/` |
 | 6 | Full-duplex: barge-in + backchannel | `src/voiceduplex/loop/full_duplex.py` |
 | 7 | Quick tools (smart-home intents) | `src/voiceduplex/smarthome/` |
-| 8 | Delegation — OnIt (primary) + Pipecat (backup) | `src/voiceduplex/delegate/`, `onit/` |
+| 8 | Delegation — Pipecat (primary) + OnIt (backup) | `src/voiceduplex/delegate/`, `onit/` |
 | 11 | Localhost web UI (mic + task sims + live output) | `web/` |
 
 ## Layout
@@ -53,8 +53,8 @@ ME3/
 │   ├── live_capability_test.py # scripted live capability test
 │   └── download_model.sh, setup_kokoro.sh
 ├── onit/                       # Step 8 agent-harness workers
-│   ├── onit_worker.py          #   OnIt (PRIMARY) persistent worker
-│   └── pipecat_worker.py       #   Pipecat (BACKUP) worker, same protocol
+│   ├── pipecat_worker.py       #   Pipecat (PRIMARY) worker
+│   └── onit_worker.py          #   OnIt (BACKUP) persistent worker, same protocol
 ├── web/                        # Step 11 localhost UI (wraps the real loop)
 │   ├── server.py               #   runs the loop + mirrors it to localhost
 │   └── index.html              #   mic viz, task sims, live transcript
@@ -115,8 +115,8 @@ PYTHONPATH=src python3 scripts/run_full_duplex.py
 Useful flags:
 
 ```bash
-# swap engines without editing config
-PYTHONPATH=src python3 scripts/run_full_duplex.py --tts piper
+# swap engines without editing config (default TTS is the piper->kokoro fallback)
+PYTHONPATH=src python3 scripts/run_full_duplex.py --tts kokoro
 PYTHONPATH=src python3 scripts/run_full_duplex.py --vad webrtc
 PYTHONPATH=src python3 scripts/run_full_duplex.py --no-barge-in
 ```
@@ -131,7 +131,7 @@ a single step.
 ```bash
 PYTHONPATH=src python3 scripts/live_capability_test.py
 PYTHONPATH=src python3 scripts/live_capability_test.py --skip-delegate
-PYTHONPATH=src python3 scripts/live_capability_test.py --tts piper --only 4
+PYTHONPATH=src python3 scripts/live_capability_test.py --tts kokoro --only 4
 ```
 
 > A majority of GARBLED/BLANK lines is a **mic/room** signature (self-interference
@@ -153,10 +153,10 @@ PYTHONPATH=src python3 web/server.py
 # then open  http://localhost:8321   (WebSocket on ws://localhost:8322)
 ```
 
-Flags: `--port`, `--ws-port`, `--vad {silero,webrtc}`, `--tts {kokoro,piper}`,
+Flags: `--port`, `--ws-port`, `--vad {silero,webrtc}`, `--tts {piper,kokoro,fallback}`,
 `--no-barge-in`, `--log`. Requires `websockets` (already in the env).
 
-## Step 8 — Delegation (OnIt primary + Pipecat backup)
+## Step 8 — Delegation (Pipecat primary + OnIt backup)
 
 Anything that isn't a backchannel or a quick-tool intent is handed to an agent
 harness as a black box. ME3 measures turnaround / keep-alive / result-back —
@@ -164,17 +164,18 @@ never the harness internals. There are **two interchangeable harnesses** behind
 one interface (`delegate/__init__.py`), both speaking the same line-oriented
 stdin/stdout worker protocol:
 
-- **OnIt** (PRIMARY) — `onit/onit_worker.py`, runs in the isolated `onit-venv`
-  (3.12) against your own vLLM / OpenAI-compatible endpoint.
-- **Pipecat** (BACKUP) — `onit/pipecat_worker.py`, in the **same** `onit-venv`.
-  Two tiers, chosen automatically: (1) a real Pipecat LLM pipeline if `pipecat`
-  is importable, else (2) a zero-dependency direct OpenAI-compatible call — so
-  the backup never hard-fails.
+- **Pipecat** (PRIMARY) — `onit/pipecat_worker.py`, in the isolated `onit-venv`
+  (3.12). Two tiers, chosen automatically: (1) a real Pipecat LLM pipeline if
+  `pipecat` is importable, else (2) a zero-dependency direct OpenAI-compatible
+  call — so the primary never hard-fails. Chosen as primary because it is fast.
+- **OnIt** (BACKUP) — `onit/onit_worker.py`, in the **same** `onit-venv`,
+  against your own vLLM / OpenAI-compatible endpoint. Slower (cold boot ~25s),
+  so it is the fallback.
 
-With `backend: fallback` (the default), the loop tries **OnIt** first and, on
+With `backend: fallback` (the default), the loop tries **Pipecat** first and, on
 *any* failure (endpoint unset, worker dies on boot, timeout, task error),
-transparently retries on **Pipecat**. The loop sees one backend and never knows
-which harness answered.
+transparently retries on **OnIt**. The loop sees one backend and never knows
+which harness answered. (Same pattern as TTS: Piper primary, Kokoro backup.)
 
 - **Persistent worker** (default): one warm process spawned on first use, served
   over stdin/stdout. Subsequent tasks skip the cold boot (~25s → ~1s).
@@ -187,9 +188,9 @@ Configure in `config/config.yaml`:
 
 ```yaml
 delegate:
-  backend: fallback        # onit | pipecat | fallback | stub
-  primary: onit            # first harness to try
-  backup: pipecat          # second harness, used when primary fails
+  backend: fallback        # pipecat | onit | fallback | stub
+  primary: pipecat         # first harness to try
+  backup: onit             # second harness, used when primary fails
   mode: persistent         # persistent | oneshot
   python: /path/to/onit-venv/bin/python
   worker: /path/to/onit_worker.py

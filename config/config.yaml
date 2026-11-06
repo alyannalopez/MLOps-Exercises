@@ -33,8 +33,17 @@ asr:
   beam_size: 5            # higher = more accurate, slower (0 = greedy/fastest)
 
 tts:
-  backend: kokoro          # kokoro (primary, natural) | piper (backup, faster/lighter)
-  voice: af_heart          # Kokoro voice id; run get_voices() for the full list
+  # backend: piper | kokoro | fallback
+  #   piper    -> Piper only (fast, in-process, slightly robotic)
+  #   kokoro   -> Kokoro only (natural, slow on this machine)
+  #   fallback -> try `primary`, and if it FAILS (worker dies, model missing,
+  #               timeout, OOM) automatically retry the same text on `backup`.
+  #   Piper is PRIMARY because it is fast; Kokoro is the backup (natural but
+  #   slow — RTF ~5-11 observed on this Mac).
+  backend: fallback
+  primary: piper           # first engine to synthesize with
+  backup: kokoro           # second engine, used when primary fails
+  voice: af_heart          # Kokoro voice id (used when Kokoro speaks); run get_voices() for the full list
                            #   female: af_heart af_sarah af_nicole af_bella af_aoede
                            #   male  : am_adam am_michael am_fenrir am_echo
   speed: 1.0               # 1.0 = normal; >1 = faster
@@ -81,8 +90,8 @@ delegate:
   #               timeout, task error) automatically retry on `backup`.
   #   stub     -> offline canned reply (no network)
   backend: fallback
-  primary: onit          # first harness to try
-  backup: pipecat        # second harness, used when primary fails
+  primary: pipecat       # first harness to try (fast; OnIt is slow on this machine)
+  backup: onit           # second harness, used when primary fails
   mode: persistent       # persistent (default: one warm worker) | oneshot (subprocess/task)
   python: /Users/yannamii/sandbox/onit-venv/bin/python   # OnIt venv interpreter
   worker: /Users/yannamii/sandbox/ME3/onit/onit_worker.py  # OnIt persistent worker daemon

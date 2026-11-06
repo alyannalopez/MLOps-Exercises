@@ -138,7 +138,24 @@ def main() -> int:
 
     # ------------------------------------------------------------------ 3. TTS
     from voiceduplex.tts import make_tts
-    if tcfg.get("backend", "kokoro") == "piper":
+    _backend = tcfg.get("backend", "piper")
+    if _backend == "fallback":
+        tts = make_tts(
+            "fallback",
+            primary=tcfg.get("primary", "piper"),
+            backup=tcfg.get("backup", "kokoro"),
+            primary_kwargs=dict(model=str(ROOT / tcfg.get("piper_model")),
+                                speed=float(tcfg.get("speed", 1.0)))
+            if tcfg.get("primary", "piper") == "piper" else dict(),
+            backup_kwargs=dict(
+                python=str(ROOT / tcfg.get("kokoro_python", ".venv-kokoro/bin/python")),
+                model=str(ROOT / tcfg.get("kokoro_model", "models/kokoro-v1.0.onnx")),
+                voices=str(ROOT / tcfg.get("kokoro_voices", "models/voices-v1.0.bin")),
+                voice=tcfg.get("voice", "af_heart"),
+                speed=float(tcfg.get("speed", 1.0)),
+            ) if tcfg.get("backup", "kokoro") == "kokoro" else dict(),
+        )
+    elif _backend == "piper":
         tts = make_tts("piper", model=str(ROOT / tcfg.get("piper_model")),
                        speed=float(tcfg.get("speed", 1.0)))
     else:

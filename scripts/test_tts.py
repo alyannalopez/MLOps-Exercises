@@ -8,8 +8,9 @@ ideal for the Pi (headless) and for regression testing.
 
 Usage:
   python scripts/test_tts.py                       # uses tts.backend from config
-  python scripts/test_tts.py --backend kokoro      # force Kokoro (primary)
-  python scripts/test_tts.py --backend piper       # force Piper (backup)
+  python scripts/test_tts.py --backend piper       # force Piper (primary)
+  python scripts/test_tts.py --backend kokoro      # force Kokoro (backup)
+  python scripts/test_tts.py --backend fallback    # primary->backup (default)
   python scripts/test_tts.py --voice af_sarah      # Kokoro voice id
   python scripts/test_tts.py --text "Your words"   # custom sentence
   python scripts/test_tts.py --no-warm             # skip the warm-up run
@@ -40,7 +41,7 @@ DEFAULT_TEXT = "Hello, this is a test of the text to speech module. The voice is
 
 def main() -> int:
     a = argparse.ArgumentParser(description="TTS offline test (Step 4)")
-    a.add_argument("--backend", default=None, help="kokoro | piper (default: from config)")
+    a.add_argument("--backend", default=None, help="piper | kokoro | fallback (default: from config)")
     a.add_argument("--voice", default=None, help="Kokoro voice id, e.g. af_heart (default: from config)")
     a.add_argument("--text", default=DEFAULT_TEXT, help="sentence to synthesize")
     a.add_argument("--out", default=None, help="output WAV path (default: data/audio/tts_<backend>.wav)")
@@ -49,11 +50,28 @@ def main() -> int:
 
     cfg = load_cfg()
     tcfg = cfg.get("tts", {})
-    backend = args.backend or tcfg.get("backend", "kokoro")
+    backend = args.backend or tcfg.get("backend", "piper")
     voice = args.voice or tcfg.get("voice", "af_heart")
 
     # Build kwargs per backend from config so overrides flow through cleanly.
-    if backend == "kokoro":
+    if backend == "fallback":
+        kwargs = dict(
+            primary=tcfg.get("primary", "piper"),
+            backup=tcfg.get("backup", "kokoro"),
+            primary_kwargs=(dict(
+                model=tcfg.get("piper_model", str(ROOT / "data" / "voices" / "en_US-lessac-medium.onnx")),
+                config=tcfg.get("piper_config"),
+                speed=float(tcfg.get("speed", 1.0)),
+            ) if tcfg.get("primary", "piper") == "piper" else dict()),
+            backup_kwargs=(dict(
+                python=tcfg.get("kokoro_python", str(ROOT / ".venv-kokoro" / "bin" / "python")),
+                model=tcfg.get("kokoro_model", str(ROOT / "models" / "kokoro-v1.0.onnx")),
+                voices=tcfg.get("kokoro_voices", str(ROOT / "models" / "voices-v1.0.bin")),
+                voice=voice,
+                speed=float(tcfg.get("speed", 1.0)),
+            ) if tcfg.get("backup", "kokoro") == "kokoro" else dict()),
+        )
+    elif backend == "kokoro":
         kwargs = dict(
             python=tcfg.get("kokoro_python", str(ROOT / ".venv-kokoro" / "bin" / "python")),
             model=tcfg.get("kokoro_model", str(ROOT / "models" / "kokoro-v1.0.onnx")),

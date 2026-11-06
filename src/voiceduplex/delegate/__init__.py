@@ -180,6 +180,7 @@ class PersistentOnItBackend(DelegateBackend):
         boot_timeout: float = 120.0,
         workdir: Optional[str] = None,
         env_extra: Optional[dict] = None,
+        display_name: str = "OnIt (persistent)",
     ) -> None:
         self.python = Path(python)
         self.worker_script = Path(worker_script)
@@ -187,12 +188,13 @@ class PersistentOnItBackend(DelegateBackend):
         self.boot_timeout = boot_timeout
         self.workdir = workdir
         self.env_extra = env_extra or {}
+        self.display_name = display_name
         self._proc: Optional[subprocess.Popen] = None
         self._lock = threading.Lock()
 
     @property
     def name(self) -> str:
-        return "OnIt (persistent)"
+        return self.display_name
 
     # -- lifecycle ---------------------------------------------------------
     def ensure_started(self) -> None:
@@ -420,6 +422,7 @@ def _build_pipecat(d: dict) -> DelegateBackend:
         boot_timeout=float(d.get("boot_timeout", 120.0)),
         workdir=d.get("workdir") or None,
         env_extra=env_extra,
+        display_name="Pipecat (persistent)",
     )
 
 
@@ -432,8 +435,8 @@ def build_backend(cfg: dict) -> DelegateBackend:
       * ``stub``     — canned offline reply (default when unset)
       * ``onit``     — OnIt harness only
       * ``pipecat``  — Pipecat harness only
-      * ``fallback`` — primary (``delegate.primary``, default onit) with an
-                       automatic backup (``delegate.backup``, default pipecat).
+      * ``fallback`` — primary (``delegate.primary``, default pipecat) with an
+                       automatic backup (``delegate.backup``, default onit).
                        If the primary fails, the task is retried on the backup.
     """
     d = (cfg or {}).get("delegate") or {}
@@ -445,8 +448,8 @@ def build_backend(cfg: dict) -> DelegateBackend:
     if kind == "pipecat":
         return _build_pipecat(d)
     if kind == "fallback":
-        primary_kind = (d.get("primary") or "onit").lower()
-        backup_kind = (d.get("backup") or "pipecat").lower()
+        primary_kind = (d.get("primary") or "pipecat").lower()
+        backup_kind = (d.get("backup") or "onit").lower()
         primary = _build_onit(d) if primary_kind == "onit" else _build_pipecat(d)
         backup = _build_pipecat(d) if backup_kind == "pipecat" else _build_onit(d)
         return FallbackDelegateBackend(primary, backup)

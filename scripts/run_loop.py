@@ -54,7 +54,7 @@ def load_cfg() -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description="ME3 half-duplex loop")
     ap.add_argument("--vad", choices=["silero", "webrtc"], default=None)
-    ap.add_argument("--tts", choices=["kokoro", "piper"], default=None)
+    ap.add_argument("--tts", choices=["kokoro", "piper", "fallback"], default=None)
     ap.add_argument("--max-turns", type=int, default=0, help="0 = run until Ctrl-C")
     ap.add_argument("--log", default=str(ROOT / "data" / "timeline.jsonl"))
     args = ap.parse_args()
@@ -90,7 +90,7 @@ def main() -> int:
         beam_size=int(asrcfg.get("beam_size", 5)),
     )
 
-    tts = _make_tts(args.tts or tcfg.get("backend", "kokoro"), tcfg, ROOT)
+    tts = _make_tts(args.tts or tcfg.get("backend", "piper"), tcfg, ROOT)
 
     print(f"  VAD={vad.__class__.__name__}  ASR={asr.__class__.__name__}  "
           f"TTS={tts.backend_name}   ({time.time()-t0:.1f}s)\n", flush=True)
@@ -136,19 +136,28 @@ def main() -> int:
 
 def _make_tts(backend: str, tcfg: dict, ROOT: Path):
     """Build the right TTS with the right kwargs (avoid cross-backend kwarg leaks)."""
-    if backend == "piper":
-        return make_tts(
-            "piper",
-            model=str(ROOT / tcfg.get("piper_model", "data/voices/en_US-lessac-medium.onnx")),
-            speed=float(tcfg.get("speed", 1.0)),
-        )
-    return make_tts(
-        "kokoro",
+    piper_kw = dict(
+        model=str(ROOT / tcfg.get("piper_model", "data/voices/en_US-lessac-medium.onnx")),
+        speed=float(tcfg.get("speed", 1.0)),
+    )
+    kokoro_kw = dict(
         python=str(ROOT / tcfg.get("kokoro_python", ".venv-kokoro/bin/python")),
         model=str(ROOT / tcfg.get("kokoro_model", "models/kokoro-v1.0.onnx")),
         voices=str(ROOT / tcfg.get("kokoro_voices", "models/voices-v1.0.bin")),
         voice=tcfg.get("voice", "af_heart"),
         speed=float(tcfg.get("speed", 1.0)),
+    )
+    if backend == "piper":
+        return make_tts("piper", **piper_kw)
+    if backend == "kokoro":
+        return make_tts("kokoro", **kokoro_kw)
+    # fallback: primary (default piper) with automatic backup (default kokoro)
+    return make_tts(
+        "fallback",
+        primary=tcfg.get("primary", "piper"),
+        backup=tcfg.get("backup", "kokoro"),
+        primary_kwargs=piper_kw if tcfg.get("primary", "piper") == "piper" else kokoro_kw,
+        backup_kwargs=kokoro_kw if tcfg.get("backup", "kokoro") == "kokoro" else piper_kw,
     )
 
 

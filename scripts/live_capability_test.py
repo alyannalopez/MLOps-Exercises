@@ -120,19 +120,28 @@ def load_cfg() -> dict:
 
 
 def _make_tts(backend: str, tcfg: dict, ROOT: Path):
-    if backend == "piper":
-        return make_tts(
-            "piper",
-            model=str(ROOT / tcfg.get("piper_model", "data/voices/en_US-lessac-medium.onnx")),
-            speed=float(tcfg.get("speed", 1.0)),
-        )
-    return make_tts(
-        "kokoro",
+    piper_kw = dict(
+        model=str(ROOT / tcfg.get("piper_model", "data/voices/en_US-lessac-medium.onnx")),
+        speed=float(tcfg.get("speed", 1.0)),
+    )
+    kokoro_kw = dict(
         python=str(ROOT / tcfg.get("kokoro_python", ".venv-kokoro/bin/python")),
         model=str(ROOT / tcfg.get("kokoro_model", "models/kokoro-v1.0.onnx")),
         voices=str(ROOT / tcfg.get("kokoro_voices", "models/voices-v1.0.bin")),
         voice=tcfg.get("voice", "af_heart"),
         speed=float(tcfg.get("speed", 1.0)),
+    )
+    if backend == "piper":
+        return make_tts("piper", **piper_kw)
+    if backend == "kokoro":
+        return make_tts("kokoro", **kokoro_kw)
+    # fallback: primary (default piper) with automatic backup (default kokoro)
+    return make_tts(
+        "fallback",
+        primary=tcfg.get("primary", "piper"),
+        backup=tcfg.get("backup", "kokoro"),
+        primary_kwargs=piper_kw if tcfg.get("primary", "piper") == "piper" else kokoro_kw,
+        backup_kwargs=kokoro_kw if tcfg.get("backup", "kokoro") == "kokoro" else piper_kw,
     )
 
 
@@ -257,7 +266,7 @@ def run_step(step: Step, loop: FullDuplexLoop) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="ME3 live capability test (scripted)")
-    ap.add_argument("--tts", choices=["kokoro", "piper"], default=None)
+    ap.add_argument("--tts", choices=["kokoro", "piper", "fallback"], default=None)
     ap.add_argument("--vad", choices=["silero", "webrtc"], default=None)
     ap.add_argument("--no-barge-in", action="store_true")
     ap.add_argument("--skip-delegate", action="store_true",
@@ -285,7 +294,7 @@ def main() -> int:
         playback_rate=int(a.get("playback_rate", 48000)),
     )
     vad = make_vad(
-        args.vad or v.get("engine", "silero"),
+        v.get("engine", "silero"),
         threshold=float(v.get("threshold", 0.5)),
         min_speech_frames=int(v.get("min_speech_frames", 4)),
         min_silence_frames=int(v.get("min_silence_frames", 12)),
@@ -298,7 +307,7 @@ def main() -> int:
         threads=int(asrcfg.get("threads", 0)),
         beam_size=int(asrcfg.get("beam_size", 5)),
     )
-    tts = _make_tts(args.tts or tcfg.get("backend", "kokoro"), tcfg, ROOT)
+    tts = _make_tts(args.tts or tcfg.get("backend", "piper"), tcfg, ROOT)
     print(f"  VAD={vad.__class__.__name__}  ASR={asr.__class__.__name__}  "
           f"TTS={tts.backend_name}   ({time.time()-t0:.1f}s)", flush=True)
 
