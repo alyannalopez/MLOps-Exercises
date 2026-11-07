@@ -50,8 +50,9 @@ class RouteDecision:
 
 # ---- backchannel detection -----------------------------------------------
 _BACKCHANNEL = re.compile(
-    r"^\s*(mm+h*|uh+ ?h+ ?uh*|yeah+|yep|yes|mm-hm|right|okay|ok|sure|got it|"
-    r"i see|exactly|cool|nice|alright|roger|affirmative|uh-huh|mmm|hm+)\s*[!.]?\s*$",
+    r"^\s*(mm+h*|mhm+m*|uh+ ?h+ ?uh*|yeah+|yep|yes|mm-hm|mhm-hm|right|okay|ok|"
+    r"sure|got it|i see|exactly|cool|nice|alright|roger|affirmative|uh-huh|"
+    r"mmm|hm+|mhm)\s*[!.]?\s*$",
     re.IGNORECASE,
 )
 

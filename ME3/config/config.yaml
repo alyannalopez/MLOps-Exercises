@@ -90,8 +90,8 @@ delegate:
   #               timeout, task error) automatically retry on `backup`.
   #   stub     -> offline canned reply (no network)
   backend: fallback
-  primary: pipecat       # first harness to try (fast; OnIt is slow on this machine)
-  backup: onit           # second harness, used when primary fails
+  primary: onit          # first harness to try (your main agent — was working before)
+  backup: pipecat        # second harness, used when primary fails
   mode: persistent       # persistent (default: one warm worker) | oneshot (subprocess/task)
   # Paths below are relative to the ME3 project root (the folder holding
   # config/, src/, onit/, ...) unless absolute. The OnIt/Pipecat venv lives
@@ -101,15 +101,24 @@ delegate:
   python: /Users/yannamii/sandbox/onit-venv/bin/python   # OnIt venv interpreter (outside repo)
   worker: onit/onit_worker.py                            # OnIt persistent worker daemon
   # runner: onit/run_onit_task.sh                        # one-shot (only if mode: oneshot)
-  # --- Pipecat backup harness (used when backend=fallback and primary fails) ---
+  # --- Pipecat primary harness ---
   pipecat_worker: onit/pipecat_worker.py
   # pipecat_python: /Users/yannamii/sandbox/onit-venv/bin/python   # reuse OnIt venv unless set
-  # Endpoint/model are supplied via the environment (never in this file):
-  #   export ONIT_HOST=http://<host>:<port>/v1        [ONIT_HOST2, ONIT_MODEL, ONIT_DATA_PATH]
-  #   export PIPECAT_HOST=http://<host>:<port>/v1     [PIPECAT_MODEL, OPENAI_API_KEY]
-  # (Or set pipecat_host / pipecat_model / openai_api_key here to forward them to the worker.)
+  # Endpoint/model are forwarded to the worker from these LOWERCASE keys
+  # (the config layer maps them to PIPECAT_* / ONIT_* env vars):
+  pipecat_host: http://localhost:7860/v1
+  pipecat_model: gpt-4o
+  # The API key is NOT stored in this file. Put it in the OS keychain:
+  #   onit setup
+  # (OnIt reads its key from the keychain; the Pipecat worker inherits
+  #  OPENAI_API_KEY from the shell if you export it before launching.)
+  # openai_api_key: <leave unset; use keychain / shell export>
+  # --- OnIt backup harness ---
+  onit_host: http://202.92.159.240:8001/v1
+  onit_model: auto
+  # onit_host2: http://<secondary>/v1      # optional load-balancing endpoint
+  # onit_data_path: /Users/yannamii/sandbox   # where OnIt runs tasks
   wait_sec: 120          # max seconds to wait for a result before apologising
   boot_timeout: 120      # max seconds to wait for the worker to come up on first use
   # workdir: /Users/yannamii/sandbox   # where OnIt runs tasks (defaults to sandbox)
-
 # (later steps) agent:, bench: blocks added in Steps 5-9

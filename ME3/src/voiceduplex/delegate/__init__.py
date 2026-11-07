@@ -391,9 +391,25 @@ def _resolve(root: Path, val, default_rel: str, default_base: Optional[Path] = N
 
 
 def _build_onit(d: dict) -> DelegateBackend:
-    """Build the OnIt backend from the ``delegate`` config block."""
+    """Build the OnIt backend from the ``delegate`` config block.
+
+    Endpoint/model are forwarded to the worker as ONIT_* env vars from the
+    config block (lowercase keys: onit_host / onit_host2 / onit_model /
+    onit_data_path), mirroring _build_pipecat. The API key is NEVER read from
+    config — OnIt pulls it from the OS keychain via `onit setup`.
+    """
     root = Path(__file__).resolve().parents[3]  # ME3 project root (config/, src/, onit/)
     sandbox = root.parent  # parent of the project root (holds the isolated onit-venv)
+    env_extra = {}
+    for cfg_key, env_key in (
+        ("onit_host", "ONIT_HOST"),
+        ("onit_host2", "ONIT_HOST2"),
+        ("onit_model", "ONIT_MODEL"),
+        ("onit_data_path", "ONIT_DATA_PATH"),
+    ):
+        v = d.get(cfg_key)
+        if v:
+            env_extra[env_key] = str(v).strip()
     # Default to the PERSISTENT worker (boots OnIt once, stays warm). Set
     # delegate.mode: oneshot to fall back to the per-task subprocess.
     mode = (d.get("mode") or "persistent").lower()
@@ -404,12 +420,14 @@ def _build_onit(d: dict) -> DelegateBackend:
             timeout=float(d.get("timeout", 120.0)),
             boot_timeout=float(d.get("boot_timeout", 120.0)),
             workdir=d.get("workdir") or None,
+            env_extra=env_extra,
         )
     runner = _resolve(root, d.get("runner"), "onit/run_onit_task.sh")
     return OnItBackend(
         runner,
         timeout=float(d.get("timeout", 120.0)),
         workdir=d.get("workdir") or None,
+        env_extra=env_extra,
     )
 
 
@@ -425,12 +443,17 @@ def _build_pipecat(d: dict) -> DelegateBackend:
     root = Path(__file__).resolve().parents[3]  # ME3 project root (config/, src/, onit/)
     sandbox = root.parent  # parent of the project root (holds the isolated onit-venv)
     env_extra = {}
-    if d.get("pipecat_host"):
-        env_extra["PIPECAT_HOST"] = d["pipecat_host"]
-    if d.get("pipecat_model"):
-        env_extra["PIPECAT_MODEL"] = d["pipecat_model"]
-    if d.get("openai_api_key"):
-        env_extra["OPENAI_API_KEY"] = d["openai_api_key"]
+    # Strip whitespace so a stray space in the YAML value can't break the
+    # endpoint URL or the API key (the worker does .strip() too, but the
+    # config layer should be clean as well).
+    for cfg_key, env_key in (
+        ("pipecat_host", "PIPECAT_HOST"),
+        ("pipecat_model", "PIPECAT_MODEL"),
+        ("openai_api_key", "OPENAI_API_KEY"),
+    ):
+        v = d.get(cfg_key)
+        if v:
+            env_extra[env_key] = str(v).strip()
     return PersistentOnItBackend(
         python=_resolve(root, d.get("pipecat_python") or d.get("python"), "onit-venv/bin/python", default_base=sandbox),
         worker_script=_resolve(root, d.get("pipecat_worker"), "onit/pipecat_worker.py"),

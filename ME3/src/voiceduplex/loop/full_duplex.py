@@ -477,6 +477,19 @@ class FullDuplexLoop:
             self.log.record(tl)
             return
 
+        # Empty / unusable transcript: the barge-in was noise or a misfire
+        # (e.g. our own voice leaking into the mic). Don't hand an empty task
+        # to the delegate — that's what produces the phantom "Let me check
+        # that." -> "I don't have a task" loop. Just stay quiet and wait.
+        if not text.strip():
+            self._log("[bc] blank overlap -> ignoring (no new command)")
+            tl.route = "backchannel_resume"
+            tl.reply = "(blank overlap ignored)"
+            tl.stamp("O2_agent_reaction")
+            tl.stamp("T8_turn_complete")
+            self.log.record(tl)
+            return
+
         self._log(f"[⚡ barge-in] interrupt: “{text}” -> responding")
         self._emit("interrupt", {"text": text})
         self._last_interrupt = text
