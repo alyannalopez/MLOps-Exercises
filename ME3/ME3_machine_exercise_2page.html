@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: 960pt 540pt; margin: 0; }
+  * { box-sizing: border-box; }
+  html,body { margin:0; padding:0; }
+  body { font-family: Helvetica, Arial, sans-serif; color:#1f2937; }
+  .mono { font-family: Courier, "Courier New", monospace; }
+  .slide { position:relative; width:960pt; height:540pt; overflow:hidden; page-break-after:always; background:#fff; }
+  .slide:last-child { page-break-after:auto; }
+
+  .band { position:absolute; top:0; left:0; width:960pt; height:84pt; background:#16243d; }
+  .strip { position:absolute; top:84pt; left:0; width:960pt; height:4pt; background:#e8742c; }
+  .kicker { position:absolute; top:13pt; left:48pt; font-size:9.5pt; font-weight:bold; color:#e8742c; letter-spacing:.4pt; }
+  .title { position:absolute; top:28pt; left:48pt; font-size:20pt; font-weight:bold; color:#fff; }
+  .hsub { position:absolute; top:39pt; right:48pt; font-size:10pt; font-style:italic; color:#b9c6da; }
+
+  .num { position:absolute; width:16pt; height:16pt; background:#e8742c; color:#fff; font-size:10.5pt; font-weight:bold; display:flex; align-items:center; justify-content:center; }
+  .stitle { position:absolute; font-size:13pt; font-weight:bold; color:#16243d; }
+  .ssub { position:absolute; font-size:9.5pt; font-style:italic; color:#8b95a5; }
+
+  .panel { position:absolute; background:#edf2f6; border:1pt solid #c9d2de; }
+  .teal { color:#0f7b84; font-weight:bold; font-size:9pt; letter-spacing:.3pt; }
+  .gray { color:#8b95a5; }
+  .orange { color:#e8742c; }
+
+  ul.bul { position:absolute; margin:0; padding:0; list-style:none; font-size:8.5pt; color:#1f2937; }
+  ul.bul li { position:relative; padding-left:10pt; line-height:1.12; }
+  ul.bul li::before { content:"\2022"; position:absolute; left:0; color:#e8742c; }
+
+  .code { position:absolute; background:#16243d; }
+  .code .l1 { position:absolute; color:#fff; font-size:8pt; }
+  .code .l2 { position:absolute; color:#e8742c; font-weight:bold; font-size:8pt; }
+
+  table { position:absolute; border-collapse:collapse; table-layout:fixed; }
+  th,td { border:0.5pt solid #c9d2de; font-size:8.5pt; color:#1f2937; text-align:left; vertical-align:middle; padding:0 5pt; }
+  thead th { background:#16243d; color:#fff; font-weight:bold; }
+  .alt td { background:#edf2f6; }
+
+  .fline { position:absolute; top:506pt; left:48pt; width:864pt; height:0; border-top:0.7pt solid #c9d2de; }
+  .fl { position:absolute; top:508.9pt; left:48pt; font-size:8.5pt; color:#8b95a5; }
+  .fc { position:absolute; top:508.9pt; left:326pt; font-size:8.5pt; color:#8b95a5; }
+  .fr { position:absolute; top:508.9pt; left:828pt; font-size:8.5pt; color:#8b95a5; }
+</style>
+</head>
+<body>
+
+<!-- ============================ SLIDE 1 ============================ -->
+<div class="slide">
+  <div class="band"></div><div class="strip"></div>
+  <div class="kicker">MACHINE EXERCISE &mdash; ME3 &middot; 2-PAGE &middot; PRIORITIZED</div>
+  <div class="title">Full-Duplex Voice Agent on a Raspberry Pi</div>
+  <div class="hsub">sections 1&ndash;6 in priority order &middot; 195 turns logged</div>
+
+  <!-- S1 SYSTEM DIAGRAM -->
+  <div class="num" style="top:107pt;left:48pt;">1</div>
+  <div class="stitle" style="top:111pt;left:70pt;">SYSTEM DIAGRAM</div>
+  <div class="ssub" style="top:114pt;left:199pt;">the one diagram that explains the build</div>
+
+  <div class="panel" style="left:48pt;top:132pt;width:430pt;height:150pt;"></div>
+  <div class="mono" style="position:absolute;top:176pt;left:48pt;width:430pt;text-align:center;font-size:11pt;font-weight:bold;font-style:italic;color:#8b95a5;">voice in &rarr; VAD &rarr; ASR &rarr; router (brain.py) &rarr; { backchannel | quick-tool | delegate } &rarr; TTS &rarr; voice out</div>
+  <div class="mono" style="position:absolute;top:210pt;left:48pt;width:430pt;text-align:center;font-size:8.5pt;font-style:italic;color:#8b95a5;">on-device: Mic &rarr; Silero VAD &rarr; whisper.cpp &rarr; router &rarr; Piper/Kokoro TTS &middot; delegate (black box): OnIt &rarr; Pipecat &rarr; vLLM</div>
+
+  <div class="code" style="left:48pt;top:294pt;width:430pt;height:22pt;"></div>
+  <div class="code l1 mono" style="left:126pt;top:296pt;">barge-in: speech &rarr; stop TTS + cancel LLM &rarr; listen (RMS floor 150)</div>
+  <div class="code l2 mono" style="left:126pt;top:307pt;">boundary: VAD/ASR/router/TTS on-device &middot; only LLM+tools turn on vLLM server</div>
+
+  <ul class="bul" style="left:480pt;top:119.8pt;width:432pt;line-height:15.5pt;">
+    <li>Mic &rarr; Silero VAD &rarr; whisper.cpp ASR &rarr; deterministic router &rarr; Piper/Kokoro TTS &rarr; speaker</li>
+    <li>Router (brain.py): backchannel (&ldquo;mm-hm&rdquo; &rarr; ack+resume) &middot; quick-tool (smart-home) &middot; delegate</li>
+    <li>Delegate (black box): OnIt harness (primary) &rarr; Pipecat (backup), persistent warm worker</li>
+    <li>Boundary: VAD/ASR/router/TTS/barge-in on-device; only the LLM+tools turn runs on vLLM</li>
+    <li>Barge-in: RMS floor (150) gates real interrupts; cancels TTS + LLM stream, drops stale audio</li>
+  </ul>
+
+  <!-- S2 PROMPT -->
+  <div class="num" style="top:339pt;left:48pt;">2</div>
+  <div class="stitle" style="top:343pt;left:70pt;">PROMPT</div>
+  <div class="ssub" style="top:346pt;left:135pt;">kept in the repo, versioned</div>
+
+  <div class="panel" style="left:48pt;top:368pt;width:430pt;height:112pt;"></div>
+  <div class="teal" style="position:absolute;top:371pt;left:58pt;">SYSTEM PROMPT (v1) &mdash; excerpt</div>
+  <div class="mono" style="position:absolute;top:385pt;left:58pt;width:410pt;font-size:7.8pt;line-height:12.2pt;color:#1f2937;">
+    ME3 is a full-duplex voice agent. Listen and speak at the same time.<br>
+    Short, natural sentences; max 2 per turn.<br>
+    If the user speaks, stop and listen immediately (barge-in).<br>
+    Backchannels (&ldquo;yeah / mm-hm / mhm&rdquo;) while you talk &rarr; acknowledge &amp; resume; do NOT restart.<br>
+    Quick smart-home intents (time, weather, lights, timer, media) &rarr; answer locally, instantly.<br>
+    Anything else &rarr; delegate (OnIt &rarr; Pipecat); confirm before costly/irreversible actions.<br>
+    Never read markdown or URLs aloud.
+  </div>
+
+  <!-- S3 CONTEXT ENGINEERING -->
+  <div class="num" style="top:339pt;left:505pt;">3</div>
+  <div class="stitle" style="top:343pt;left:522pt;">CONTEXT ENGINEERING</div>
+  <div class="ssub" style="top:346pt;left:650pt;">what enters the window, and how it is controlled</div>
+
+  <div class="teal" style="position:absolute;top:364pt;left:510pt;">GOES IN:</div>
+  <ul class="bul" style="left:510pt;top:378pt;width:190pt;line-height:11.5pt;">
+    <li>system prompt + persona</li>
+    <li>ASR partials/finals (rolling)</li>
+    <li>VAD turn events (T0&ndash;T8, O0&ndash;O2)</li>
+    <li>router decision (bc / tool / delegate)</li>
+    <li>harness result (T3&rarr;T6 interval)</li>
+  </ul>
+  <div class="teal" style="position:absolute;top:364pt;left:721pt;">MANAGED:</div>
+  <ul class="bul" style="left:721pt;top:378pt;width:190pt;line-height:11.5pt;">
+    <li>token budget; trim / summarize</li>
+    <li>cache stable prefix (TTFT)</li>
+    <li>idle &rarr; listen &rarr; think &rarr; speak</li>
+    <li>on barge-in: drop stale audio</li>
+    <li>log context size + timeline (JSONL)</li>
+  </ul>
+
+  <div class="fline"></div>
+  <div class="fl">Machine Exercise &mdash; ME3 Full-Duplex Voice Agent (Mac &rarr; Raspberry Pi)</div>
+  <div class="fc">OnIt primary &middot; Pipecat backup &middot; sections 1&ndash;6</div>
+  <div class="fr">2-page prioritized &middot; 1/2</div>
+</div>
+
+<!-- ============================ SLIDE 2 ============================ -->
+<div class="slide">
+  <div class="band"></div><div class="strip"></div>
+  <div class="kicker">MACHINE EXERCISE &mdash; ME3 &middot; 2-PAGE &middot; PRIORITIZED</div>
+  <div class="title">MCP Services, Evaluation &amp; Model Serving</div>
+  <div class="hsub">build + run servers on-device &middot; one clock, one truth</div>
+
+  <!-- S4 MCP SERVICES -->
+  <div class="num" style="top:107pt;left:48pt;">4</div>
+  <div class="stitle" style="top:111pt;left:70pt;">MCP SERVICES + MODEL SERVING</div>
+  <div class="ssub" style="top:114pt;left:266pt;">one table, one truth &mdash; what runs where</div>
+
+  <table style="left:48pt;top:130pt;width:864pt;height:120pt;">
+    <colgroup><col style="width:62pt"><col style="width:152pt"><col style="width:160pt"><col style="width:155pt"><col style="width:335pt"></colgroup>
+    <thead><tr><th style="height:20pt;">Component</th><th>MCP server / transport</th><th>Tools</th><th>Model (example)</th><th>Served where / notes</th></tr></thead>
+    <tbody>
+      <tr style="height:20pt;"><td>VAD</td><td>in-process</td><td>detect_speech(frames)</td><td>Silero VAD</td><td>on-device, 16 kHz mono, thr 0.5</td></tr>
+      <tr class="alt" style="height:20pt;"><td>ASR</td><td>whisper.cpp (local)</td><td>transcribe(audio)&rarr;text</td><td>ggml-base.en</td><td>on-device; offline, final on VAD end</td></tr>
+      <tr style="height:20pt;"><td>TTS</td><td>Piper primary / Kokoro backup</td><td>speak(text)&rarr;audio</td><td>lessac-medium / kokoro-v1.0</td><td>on-device; stream chunks, cancel on barge-in</td></tr>
+      <tr class="alt" style="height:20pt;"><td>Router</td><td>in-process (brain.py)</td><td>classify(transcript)&rarr;route</td><td>n/a (deterministic)</td><td>on-device; backchannel / tool / delegate</td></tr>
+      <tr style="height:20pt;"><td>LLM + tools</td><td>harness MCP client (OnIt&rarr;Pipecat)</td><td>function-calling</td><td>vLLM endpoint</td><td>cloud/server; streaming tokens, black box</td></tr>
+    </tbody>
+  </table>
+
+  <!-- S5 EVALUATION -->
+  <div class="num" style="top:261pt;left:48pt;">5</div>
+  <div class="stitle" style="top:265pt;left:70pt;">EVALUATION &amp; BENCHMARK</div>
+  <div class="ssub" style="top:268pt;left:266pt;">standardized latency method (classwork)</div>
+
+  <ul class="bul" style="left:48pt;top:280pt;width:420pt;line-height:13.5pt;">
+    <li>One clock: monotonic; timestamp every stage (T0&ndash;T8, O0&ndash;O2) to JSONL per run</li>
+    <li>Chain: VAD end &rarr; ASR final &rarr; route &rarr; LLM 1st token &rarr; TTS 1st audio &rarr; speaker</li>
+    <li>E2E = speaker &minus; VAD end; barge-in = stop &minus; speech start</li>
+    <li>195 turns logged; report mean + p95; JSON log per run (data/timeline.jsonl)</li>
+    <li class="gray" style="color:#8b95a5;">*E2E is delegate-dominated (vLLM turn); local quick-tool turns close &lt; 1.5 s</li>
+  </ul>
+
+  <table style="left:488pt;top:282pt;width:376pt;height:119pt;">
+    <colgroup><col style="width:72pt"><col style="width:160pt"><col style="width:52pt"><col style="width:42pt"><col style="width:50pt"></colgroup>
+    <thead><tr><th style="height:15pt;">Metric</th><th>Definition</th><th>Target</th><th>Mean</th><th>p95</th></tr></thead>
+    <tbody>
+      <tr style="height:15pt;"><td>ASR final</td><td>end of speech &rarr; transcript</td><td>&le; 800 ms</td><td>708 ms</td><td>2223 ms</td></tr>
+      <tr class="alt" style="height:15pt;"><td>Routing</td><td>transcript &rarr; route decision</td><td>&le; 5 ms</td><td>0 ms</td><td>1 ms</td></tr>
+      <tr style="height:15pt;"><td>E2E / TTFA</td><td>end of speech &rarr; audio out</td><td>local &le; 1.5 s</td><td>8.8 s*</td><td>33.8 s*</td></tr>
+      <tr class="alt" style="height:15pt;"><td>Barge-in</td><td>speech &rarr; playback stopped</td><td>&le; 200 ms</td><td>~1 chunk</td><td>~150 ms</td></tr>
+      <tr style="height:15pt;"><td>WER</td><td>ASR accuracy on test set</td><td>&le; 10 %</td><td>pending</td><td>pending</td></tr>
+    </tbody>
+  </table>
+
+  <!-- bottom three panels -->
+  <div class="panel" style="left:48pt;top:392pt;width:280pt;height:96pt;"></div>
+  <div class="teal" style="position:absolute;top:395pt;left:57pt;">DEMO (deck 2)</div>
+  <ul class="bul gray" style="left:57pt;top:407pt;width:262pt;line-height:11pt;font-size:8pt;">
+    <li>2&ndash;3 min script: real task, natural turns (no push-to-talk)</li>
+    <li>barge-in mid-sentence + backchannel (&ldquo;mm-hm&rdquo;) that does NOT interrupt</li>
+    <li>live quick-tool call (time / weather / lights) &mdash; instant local answer</li>
+    <li>delegate a harder task to OnIt; recovery when the API is slow (Pipecat backup)</li>
+  </ul>
+
+  <div class="panel" style="left:340pt;top:392pt;width:280pt;height:96pt;"></div>
+  <div class="teal" style="position:absolute;top:395pt;left:349pt;">RESULTS (deck 2)</div>
+  <ul class="bul gray" style="left:349pt;top:407pt;width:262pt;line-height:11pt;font-size:8pt;">
+    <li>Fill Mean/p95 above; paste latency chart from data/timeline.jsonl</li>
+    <li>State: Mac dev rig &rarr; target RPi (model/RAM, cooling, network, date, versions)</li>
+    <li>Routes seen in 195 turns: delegate 143 &middot; quick-tool 45 &middot; backchannel 7</li>
+  </ul>
+
+  <div class="panel" style="left:632pt;top:392pt;width:280pt;height:96pt;"></div>
+  <div class="teal" style="position:absolute;top:395pt;left:641pt;">CHALLENGES &amp; REFERENCES</div>
+  <ul class="bul gray" style="left:641pt;top:407pt;width:262pt;line-height:10.5pt;font-size:7.6pt;">
+    <li><b style="color:#1f2937">&ldquo;mm-hm&rdquo; = barge-in</b> &rarr; widened backchannel regex (mhm/mhmm/mm-hm); now ack+resume</li>
+    <li><b style="color:#1f2937">Phantom &ldquo;let me check&rdquo;</b> &rarr; guard _handle_interrupt on blank; [BLANK_AUDIO] ignored</li>
+    <li><b style="color:#1f2937">First word dropped</b> &rarr; ASR cleanup before delegate; full question reaches harness</li>
+    <li>refs: modelcontextprotocol.io &middot; Full-Duplex-Bench (arXiv:2503.04721) &middot; King V1.5</li>
+    <li>repo: github.com/alyannalopez/MLOps-Exercises (ME3/) &middot; logs: data/timeline.jsonl</li>
+  </ul>
+
+  <div class="fline"></div>
+  <div class="fl">Machine Exercise &mdash; ME3 Full-Duplex Voice Agent (Mac &rarr; Raspberry Pi)</div>
+  <div class="fc">OnIt primary &middot; Pipecat backup &middot; sections 1&ndash;6</div>
+  <div class="fr">2-page prioritized &middot; 2/2</div>
+</div>
+
+</body>
+</html>

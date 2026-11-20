@@ -10,6 +10,22 @@ Tools exposed:
   - add_reminder      (simulated: not persisted)
   - list_items        (simulated: always empty)
   - contact_message   (simulated: no message sent)
+  - start_background_task  (M4.5: starts async research task)
+  - get_task_status          (M4.5: check task status)
+  - list_background_tasks    (M4.5: list all tasks)
+  - cancel_background_task   (M4.5: cancel a task)
+  - get_task_result          (M4.5: get task result)
+  - create_website_project   (M4.75: create a website project)
+  - create_website_file      (M4.75: create a file in a project)
+  - read_website_file        (M4.75: read a project file)
+  - edit_website_file        (M4.75: edit a project file)
+  - list_website_files       (M4.75: list project files)
+  - preview_website          (M4.75: start local preview)
+  - get_website_project_status (M4.75: project info)
+  - check_github_configuration (M4.75: check GitHub setup)
+  - check_github_repository    (M4.75: check repo status)
+  - publish_website_to_github  (M4.75: publish to Pages)
+  - get_github_pages_status    (M4.75: deployment status)
 
 Run standalone:
     python -m genie.mcp_server
@@ -246,6 +262,25 @@ def contact_message(contact: str, message: str) -> str:
         f"I've noted a message to {contact}: '{message}', "
         "but this is simulated — no message was actually sent."
     )
+
+
+# ---------------------------------------------------------------------------
+# M4.5: Background task management tools
+# ---------------------------------------------------------------------------
+from genie.task_tools import (
+    register_task_tools,
+    start_background_task,
+    get_task_status,
+    list_background_tasks,
+    cancel_background_task,
+    get_task_result,
+)
+
+register_task_tools(server)
+
+# M4.75: Website creation and GitHub Pages publishing tools
+from genie.website_tools import register_website_tools
+register_website_tools(server)
 
 
 # ---------------------------------------------------------------------------

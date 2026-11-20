@@ -67,9 +67,9 @@ class Config:
 
     # --- VAD ---
     vad_threshold: float = 0.5
-    min_speech_ms: int = 280
-    min_silence_ms: int = 400
-    endpointing_ms: int = 600
+    min_speech_ms: int = 400
+    min_silence_ms: int = 600
+    endpointing_ms: int = 1000
 
     # --- Wakeword ---
     wakeword: str = "genie"
@@ -85,6 +85,11 @@ class Config:
     social_linkedin: str = ""
     social_website: str = ""
     social_twitter: str = ""
+
+    # --- GitHub Pages publishing (optional) ---
+    github_token: str = ""
+    github_username: str = ""
+    github_pages_repository: str = ""
 
     # --- Derived ---
     @property
@@ -167,4 +172,7 @@ class Config:
             social_linkedin=_get("GENIE_SOCIAL_LINKEDIN", ""),
             social_website=_get("GENIE_SOCIAL_WEBSITE", ""),
             social_twitter=_get("GENIE_SOCIAL_TWITTER", ""),
+            github_token=_get("GITHUB_TOKEN", ""),
+            github_username=_get("GITHUB_USERNAME", ""),
+            github_pages_repository=_get("GITHUB_PAGES_REPOSITORY", ""),
         )

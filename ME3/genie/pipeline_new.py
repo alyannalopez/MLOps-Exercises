@@ -34,6 +34,7 @@ import logging
 import sys
 
 from pipecat.audio.vad.silero import SileroVADAnalyzer, VADParams
+from pipecat.processors.aggregators.llm_response_universal import EmptyUserTurnConfig
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineWorker, PipelineParams
 from pipecat.workers.runner import WorkerRunner
@@ -54,6 +55,10 @@ from genie.brain import build_system_prompt
 from genie.config import Config
 from genie.mcp_server import server as mcp_server
 from genie.services import KokoroHTTPTTSService, WhisperHTTPSTTService
+from genie.task_manager import get_task_manager, NotificationCoordinator
+# Dashboard imports kept for future re-enablement (M4.76):
+# from genie.terminal_dashboard import TerminalDashboard
+# from genie.dashboard_observer import DashboardObserver
 
 log = logging.getLogger("genie")
 
@@ -62,7 +67,7 @@ log = logging.getLogger("genie")
 # Pipeline builder
 # ---------------------------------------------------------------------------
 
-async def build_pipeline(cfg: Config) -> Pipeline:
+async def build_pipeline(cfg: Config, **kwargs) -> Pipeline:
     """Build the full-duplex voice assistant pipeline with native Pipecat stages."""
     log.info("Model server: %s", cfg.server_url)
 
@@ -178,24 +183,35 @@ async def build_pipeline(cfg: Config) -> Pipeline:
         lmc,
         user_params=LLMUserAggregatorParams(
             vad_analyzer=vad,
+            empty_user_turn=EmptyUserTurnConfig(
+                interrupted_prompt=None,
+                idle_prompt=None,
+            ),
         ),
         assistant_params=LLMAssistantAggregatorParams(),
     )
 
     # --- 9. Assemble pipeline ---
     # Correct cascade order (verified against Pipecat 1.15.0):
-    #   transport.input() → stt → user agg → llm → tts → transport.output() → assistant agg
-    pipeline = Pipeline([
+    #   transport.input() → stt → user agg → llm → tts → transport.output()
+    #     → dashboard observer → assistant agg
+    # The DashboardObserver is transparent — it forwards all frames unchanged
+    # while notifying the terminal dashboard of state changes.
+    dashboard_observer: FrameProcessor | None = kwargs.get("dashboard_observer")
+    stages: list[FrameProcessor] = [
         transport.input(),
         stt,
         pair.user(),
         llm,
         tts,
         transport.output(),
-        pair.assistant(),
-    ])
+    ]
+    if dashboard_observer is not None:
+        stages.append(dashboard_observer)
+    stages.append(pair.assistant())
+    pipeline = Pipeline(stages)
 
-    return pipeline
+    return pipeline, tts
 
 
 # ---------------------------------------------------------------------------
@@ -254,7 +270,19 @@ async def main():
     log.info("MCP server started on %s", cfg.mcp_url)
 
     # --- Build pipeline (includes MCP client connection) ---
-    pipeline = await build_pipeline(cfg)
+    # --- M4.5: Task Manager ---
+    tm = get_task_manager()
+
+    # --- M4.76: Terminal Dashboard — DISABLED for demo stability ---
+    # dashboard = TerminalDashboard()
+    # await dashboard.start()
+    # obs = DashboardObserver(dashboard=dashboard, task_manager=tm)
+    # pipeline, tts_service = await build_pipeline(cfg, dashboard_observer=obs)
+    # --- End dashboard disable ---
+    pipeline, tts_service = await build_pipeline(cfg, dashboard_observer=None)
+    notifier = NotificationCoordinator(tts_service, tm)
+    await notifier.start()
+    log.info("M4.5: Notification coordinator started")
 
     worker = PipelineWorker(
         pipeline,
@@ -272,7 +300,15 @@ async def main():
     await runner.add_workers(worker)
     await runner.run()
 
-    # Cleanup: stop MCP server
+    # Cleanup: stop notification coordinator and MCP server
+    await notifier.stop()
+    log.info("M4.5: Notification coordinator stopped")
+    # --- M4.76: Dashboard cleanup — DISABLED ---
+    # await obs.shutdown()
+    # log.info("M4.76: Dashboard observer stopped")
+    # await dashboard.shutdown()
+    # log.info("M4.76: Dashboard stopped")
+    # --- End dashboard cleanup disable ---
     mcp_task.cancel()
     try:
         await mcp_task
