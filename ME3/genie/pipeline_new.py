@@ -6,9 +6,9 @@ Architecture (each stage is a separate Pipecat component):
     → WhisperHTTPSTTService — SegmentedSTTService, VAD-gated, calls Mac /transcribe, yields TranscriptionFrame
       → LLMUserAggregator   — collects TranscriptionFrame → LLMContext (VAD-driven turn detection)
         → OpenRouterLLMService — LLM reasoning + tool calling
-          → LLMAssistantAggregator — collects LLM text → TTS
-            → KokoroHTTPTTSService — HTTP POST to Mac /speak
-              → transport.output() — speaker playback, 24kHz mono
+          → KokoroHTTPTTSService — HTTP POST to Mac /speak, yields TTSAudioRawFrame
+            → transport.output() — speaker playback, 24kHz mono
+              → LLMAssistantAggregator — collects LLM text for context (after TTS, doesn't block audio)
 
 Key design decisions:
   • Native Pipecat Pipeline/PipelineWorker/WorkerRunner — no hand-rolled loop.
@@ -180,23 +180,30 @@ def build_pipeline(cfg: Config) -> Pipeline:
 
     # --- 9. Assemble pipeline ---
     # Correct cascade order (verified against Pipecat 1.15.0):
-    #   transport.input() → stt → user agg → llm → assistant agg → tts → transport.output()
+    #   transport.input() → stt → user agg → llm → tts → transport.output() → assistant agg
+    #
+    # Why assistant agg is LAST (verified against Pipecat 1.15.0 source):
+    #   LLMAssistantAggregator.process_frame() absorbs LLMTextFrame via _handle_text()
+    #   which appends to _aggregation but does NOT push downstream. If placed before
+    #   TTS, the text frames never reach the TTS service and no audio is produced.
+    #   Placed after transport.output(), it collects text for context management
+    #   without blocking the audio path.
     #
     # Frame flow:
-    #   InputAudioRawFrame: transport → stt (buffers) → user (passes) → llm (ignores)
-    #   VADUserStartedSpeakingFrame: user broadcasts → stt (upstream) + llm (downstream)
-    #   TranscriptionFrame: stt → user (aggregates, pushes LLMContextFrame) → llm (consumes)
-    #   LLMFullResponseStartFrame: llm → assistant (starts collecting) → tts (ignores)
-    #   LLMTextFrame: llm → assistant (collects, converts to TextFrame) → tts (synthesizes)
-    #   TTSAudioRawFrame: tts → transport.output() (plays)
+    #   InputAudioRawFrame: transport → stt (buffers) → user (passes) → llm (ignores) → tts (ignores) → output (plays) → assistant (passes)
+    #   VADUserStartedSpeakingFrame: user broadcasts → stt (upstream) + llm/tts/output/assistant (downstream)
+    #   TranscriptionFrame: stt → user (aggregates, pushes LLMContextFrame) → llm (consumes) → tts (ignores) → output (passes) → assistant (passes)
+    #   LLMFullResponseStartFrame: llm → tts (ignores) → output (passes) → assistant (starts collecting)
+    #   LLMTextFrame: llm → tts (synthesizes) → output (passes) → assistant (collects for context)
+    #   TTSAudioRawFrame: tts → output (plays) → assistant (passes)
     pipeline = Pipeline([
         transport.input(),
         stt,
         pair.user(),
         llm,
-        pair.assistant(),
         tts,
         transport.output(),
+        pair.assistant(),
     ])
 
     return pipeline
