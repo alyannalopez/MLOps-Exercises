@@ -57,6 +57,10 @@ class Config:
     # --- Network ---
     server_url: str = ""
 
+    # --- MCP Server ---
+    mcp_port: int = 8301
+    mcp_host: str = "127.0.0.1"
+
     # --- Audio ---
     mic_device: int | None = None
     speaker_device: int | None = None
@@ -70,6 +74,18 @@ class Config:
     # --- Wakeword ---
     wakeword: str = "genie"
 
+    # --- Identity ---
+    assistant_name: str = "Genie"
+    project_creator: str = ""
+    project_owner: str = ""
+    llm_gateway: str = "OpenRouter"
+
+    # --- Social media (optional) ---
+    social_github: str = ""
+    social_linkedin: str = ""
+    social_website: str = ""
+    social_twitter: str = ""
+
     # --- Derived ---
     @property
     def asr_url(self) -> str:
@@ -82,6 +98,10 @@ class Config:
     @property
     def health_url(self) -> str:
         return f"{self.server_url}/health"
+
+    @property
+    def mcp_url(self) -> str:
+        return f"http://{self.mcp_host}:{self.mcp_port}/mcp"
 
     # ------------------------------------------------------------------
     # Class factory
@@ -130,6 +150,8 @@ class Config:
             tts_speed=_float("GENIE_TTS_SPEED", 1.0),
             server_port=_int("GENIE_PORT", 8300),
             server_url=url,
+            mcp_port=_int("MCP_PORT", 8301),
+            mcp_host=_get("MCP_HOST", "127.0.0.1"),
             mic_device=int(mic) if mic else None,
             speaker_device=int(spk) if spk else None,
             vad_threshold=_float("GENIE_VAD_THRESHOLD", 0.5),
@@ -137,4 +159,12 @@ class Config:
             min_silence_ms=_int("GENIE_MIN_SILENCE_MS", 400),
             endpointing_ms=_int("GENIE_ENDPOINTING_MS", 600),
             wakeword=_get("GENIE_WAKEWORD", "genie"),
+            assistant_name=_get("GENIE_ASSISTANT_NAME", "Genie"),
+            project_creator=_get("GENIE_PROJECT_CREATOR", ""),
+            project_owner=_get("GENIE_PROJECT_OWNER", ""),
+            llm_gateway=_get("GENIE_LLM_GATEWAY", "OpenRouter"),
+            social_github=_get("GENIE_SOCIAL_GITHUB", ""),
+            social_linkedin=_get("GENIE_SOCIAL_LINKEDIN", ""),
+            social_website=_get("GENIE_SOCIAL_WEBSITE", ""),
+            social_twitter=_get("GENIE_SOCIAL_TWITTER", ""),
         )

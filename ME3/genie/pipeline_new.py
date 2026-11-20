@@ -37,54 +37,32 @@ from pipecat.audio.vad.silero import SileroVADAnalyzer, VADParams
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineWorker, PipelineParams
 from pipecat.workers.runner import WorkerRunner
-from pipecat.processors.aggregators.llm_context import (
-    FunctionSchema,
-    LLMContext,
-)
+from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMAssistantAggregatorParams,
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
+from pipecat.services.mcp_service import MCPClient, StreamableHttpParameters
 from pipecat.services.openrouter.llm import OpenRouterLLMService
 from pipecat.transports.local.audio import (
     LocalAudioTransport,
     LocalAudioTransportParams,
 )
 
-from genie.brain import GENIE_SYSTEM_PROMPT, TOOL_SCHEMAS, dispatch_tool
+from genie.brain import build_system_prompt
 from genie.config import Config
+from genie.mcp_server import server as mcp_server
 from genie.services import KokoroHTTPTTSService, WhisperHTTPSTTService
 
 log = logging.getLogger("genie")
 
 
 # ---------------------------------------------------------------------------
-# Tool handlers
-# ---------------------------------------------------------------------------
-
-def make_handler(tool_name: str):
-    """Create an async tool handler that dispatches to dispatch_tool().
-
-    The handler receives FunctionCallParams and calls result_callback()
-    with the tool's string result.
-    """
-    async def handler(params):
-        try:
-            args = dict(params.arguments)
-            result = dispatch_tool(tool_name, args)
-            await params.result_callback(result)
-        except Exception as e:
-            log.error("Tool %s(%s) failed: %s", tool_name, params.arguments, e)
-            await params.result_callback(f"Error executing {tool_name}: {e}")
-    return handler
-
-
-# ---------------------------------------------------------------------------
 # Pipeline builder
 # ---------------------------------------------------------------------------
 
-def build_pipeline(cfg: Config) -> Pipeline:
+async def build_pipeline(cfg: Config) -> Pipeline:
     """Build the full-duplex voice assistant pipeline with native Pipecat stages."""
     log.info("Model server: %s", cfg.server_url)
 
@@ -96,6 +74,35 @@ def build_pipeline(cfg: Config) -> Pipeline:
         )
 
     # --- 1. Audio transport (mic in → speaker out) ---
+    mic_idx = cfg.mic_device
+    if mic_idx is None:
+        # Auto-detect: prefer USB wireless mic, fall back to built-in
+        import pyaudio
+        pa = pyaudio.PyAudio()
+        mic_idx = -1
+        for i in range(pa.get_device_count()):
+            dev = pa.get_device_info_by_index(i)
+            if dev["maxInputChannels"] < 1:
+                continue
+            name = dev["name"].lower()
+            # Prefer USB wireless mic (TH30), then built-in
+            if "th30" in name or "usb" in name or "wireless" in name:
+                mic_idx = i
+                break
+            elif "microphone" in name or "air" in name:
+                if mic_idx == -1:
+                    mic_idx = i  # fallback candidate
+        dev_name = pa.get_device_info_by_index(mic_idx)["name"]
+        pa.terminate()
+        if mic_idx == -1:
+            raise RuntimeError(
+                "No microphone found. Set GENIE_MIC_DEVICE in .env "
+                "to the index of your desired input device."
+            )
+        log.info("Auto-detected mic: %s (device %d)", dev_name, mic_idx)
+    else:
+        log.info("Using configured mic device: %d", mic_idx)
+
     transport = LocalAudioTransport(
         params=LocalAudioTransportParams(
             audio_in_enabled=True,
@@ -104,7 +111,7 @@ def build_pipeline(cfg: Config) -> Pipeline:
             audio_out_enabled=True,
             audio_out_sample_rate=24000,
             audio_out_channels=1,
-            input_device_index=cfg.mic_device,
+            input_device_index=mic_idx,
             output_device_index=cfg.speaker_device,
         ),
     )
@@ -116,6 +123,7 @@ def build_pipeline(cfg: Config) -> Pipeline:
             confidence=cfg.vad_threshold,
             start_secs=cfg.min_speech_ms / 1000,
             stop_secs=cfg.endpointing_ms / 1000,
+            min_volume=0.01,  # Lowered: built-in mics produce low-amplitude signals
         ),
     )
 
@@ -144,30 +152,26 @@ def build_pipeline(cfg: Config) -> Pipeline:
         timeout=30.0,
     )
 
-    # --- 6. Register tool handlers on the LLM ---
-    for schema in TOOL_SCHEMAS:
-        handler = make_handler(schema.name)
-        llm.register_function(schema.name, handler)
-        log.info("Registered tool: %s — %s", schema.name, schema.description)
+    # --- 6. MCP Client — discovers and registers tools from MCP server ---
+    mcp = MCPClient(
+        server_params=StreamableHttpParameters(
+            url=cfg.mcp_url,
+            timeout=30.0,
+        )
+    )
+    mcp_tools = await mcp.tools()
+    log.info("MCP tools discovered: %d", len(mcp_tools.standard_tools))
+    for t in mcp_tools.standard_tools:
+        log.info("  - %s: %s", t.name, t.description[:70])
 
-    # --- 7. LLM Context with system prompt ---
+    # --- 7. LLM Context with dynamic system prompt + MCP tools ---
+    system_prompt = build_system_prompt(cfg)
     lmc = LLMContext(
         messages=[
-            {"participant": "system", "text": GENIE_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
         ],
+        tools=mcp_tools,  # MCP tools auto-register handlers with LLM
     )
-
-    # Register tool schemas on the context
-    tool_schemas: list[FunctionSchema] = []
-    for schema in TOOL_SCHEMAS:
-        fs = FunctionSchema(
-            name=schema.name,
-            description=schema.description,
-            properties=schema.parameters.get("properties", {}),
-            required=schema.parameters.get("required", []),
-        )
-        tool_schemas.append(fs)
-    lmc.set_tools(tool_schemas)
 
     # --- 8. Aggregator pair (VAD drives user turn detection) ---
     pair = LLMContextAggregatorPair(
@@ -181,21 +185,6 @@ def build_pipeline(cfg: Config) -> Pipeline:
     # --- 9. Assemble pipeline ---
     # Correct cascade order (verified against Pipecat 1.15.0):
     #   transport.input() → stt → user agg → llm → tts → transport.output() → assistant agg
-    #
-    # Why assistant agg is LAST (verified against Pipecat 1.15.0 source):
-    #   LLMAssistantAggregator.process_frame() absorbs LLMTextFrame via _handle_text()
-    #   which appends to _aggregation but does NOT push downstream. If placed before
-    #   TTS, the text frames never reach the TTS service and no audio is produced.
-    #   Placed after transport.output(), it collects text for context management
-    #   without blocking the audio path.
-    #
-    # Frame flow:
-    #   InputAudioRawFrame: transport → stt (buffers) → user (passes) → llm (ignores) → tts (ignores) → output (plays) → assistant (passes)
-    #   VADUserStartedSpeakingFrame: user broadcasts → stt (upstream) + llm/tts/output/assistant (downstream)
-    #   TranscriptionFrame: stt → user (aggregates, pushes LLMContextFrame) → llm (consumes) → tts (ignores) → output (passes) → assistant (passes)
-    #   LLMFullResponseStartFrame: llm → tts (ignores) → output (passes) → assistant (starts collecting)
-    #   LLMTextFrame: llm → tts (synthesizes) → output (passes) → assistant (collects for context)
-    #   TTSAudioRawFrame: tts → output (plays) → assistant (passes)
     pipeline = Pipeline([
         transport.input(),
         stt,
@@ -214,7 +203,7 @@ def build_pipeline(cfg: Config) -> Pipeline:
 # ---------------------------------------------------------------------------
 
 async def main():
-    """Run the pipeline."""
+    """Run the pipeline with MCP server."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -223,7 +212,8 @@ async def main():
 
     # Load configuration from .env + environment variables
     cfg = Config.load()
-    log.info("Loaded config: server=%s, model=%s", cfg.server_url, cfg.llm_model)
+    log.info("Loaded config: server=%s, model=%s, mcp=%s",
+             cfg.server_url, cfg.llm_model, cfg.mcp_url)
 
     if not cfg.openrouter_api_key:
         log.error(
@@ -233,7 +223,38 @@ async def main():
         )
         sys.exit(1)
 
-    pipeline = build_pipeline(cfg)
+    # --- Start MCP server in background ---
+    log.info("Starting MCP server on %s:%d...", cfg.mcp_host, cfg.mcp_port)
+    mcp_task = asyncio.create_task(
+        mcp_server.run_streamable_http_async(
+            host=cfg.mcp_host,
+            port=cfg.mcp_port,
+            streamable_http_path="/mcp",
+        )
+    )
+    # Give the MCP server a moment to bind its port
+    await asyncio.sleep(1)
+
+    # Verify MCP server is alive before continuing
+    if mcp_task.done():
+        exc = mcp_task.exception()
+        if exc:
+            if "Address already in use" in str(exc) or "OSError" in str(type(exc).__name__):
+                log.error(
+                    "Port %d is already in use. Another MCP server may be running. "
+                    "Kill it or change MCP_PORT in .env.",
+                    cfg.mcp_port,
+                )
+            else:
+                log.error("MCP server failed to start: %s", exc)
+            sys.exit(1)
+        log.error("MCP server task finished unexpectedly.")
+        sys.exit(1)
+
+    log.info("MCP server started on %s", cfg.mcp_url)
+
+    # --- Build pipeline (includes MCP client connection) ---
+    pipeline = await build_pipeline(cfg)
 
     worker = PipelineWorker(
         pipeline,
@@ -250,6 +271,14 @@ async def main():
     log.info("Say something to begin the conversation.")
     await runner.add_workers(worker)
     await runner.run()
+
+    # Cleanup: stop MCP server
+    mcp_task.cancel()
+    try:
+        await mcp_task
+    except asyncio.CancelledError:
+        pass
+    log.info("MCP server stopped.")
 
 
 if __name__ == "__main__":
