@@ -48,8 +48,8 @@ class WhisperHTTPSTTService(SegmentedSTTService):
         self._timeout = timeout
         self._client = httpx.AsyncClient(timeout=timeout)
         # Satisfy STTSettings validation
-        self._stt_settings.model = "mlx-whisper-large-v3-turbo"
-        self._stt_settings.language = language
+        self._settings.model = "mlx-whisper-large-v3-turbo"
+        self._settings.language = language
 
     async def run_stt(self, audio: bytes):
         """audio: WAV-encoded bytes (16-bit signed little-endian, mono).
@@ -100,9 +100,9 @@ class KokoroHTTPTTSService(TTSService):
         self._timeout = timeout
         self._client = httpx.AsyncClient(timeout=timeout)
         # Satisfy TTSSettings validation
-        self._tts_settings.model = "kokoro-0.9.4"
-        self._tts_settings.voice = self._voice
-        self._tts_settings.language = "en"
+        self._settings.model = "kokoro-0.9.4"
+        self._settings.voice = self._voice
+        self._settings.language = "en"
 
     async def run_tts(self, text: str, context_id: str):
         """Yield TTSAudioRawFrame(s) for the given text."""
