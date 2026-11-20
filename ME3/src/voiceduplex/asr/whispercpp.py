@@ -66,8 +66,11 @@ class WhisperCpp(ASR):
                 f"'{self.binary}' not on PATH. Install whisper.cpp "
                 f"(mac: brew install whisper-cpp; pi: build from source)."
             )
-        # A 0-frame run forces model load without doing real work.
-        self._run(empty=True)
+        # A short silence clip forces model load without doing real work.
+        # NOTE: must be NON-zero frames — newer whisper.cpp (miniaudio) rejects
+        # a 0-byte data chunk with "failed to read the frames of the audio
+        # data (Invalid argument)" -> exit 11. 44 ms of silence is enough.
+        self._run(np.zeros(int(0.044 * self.sample_rate), dtype=np.int16))
         self._warmed = True
 
     # -- public API ----------------------------------------------------------

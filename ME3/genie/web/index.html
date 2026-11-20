@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genie — Voice Assistant</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #d4af37;
+    --gold-dark: #b8860b;
+    --cream: #fffdf5;
+    --white: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  body {
+    font-family: 'Georgia', serif;
+    background: var(--cream);
+    color: var(--ink);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .card {
+    background: var(--white);
+    border: 2px solid var(--gold);
+    border-radius: 16px;
+    padding: 32px;
+    width: 420px;
+    max-width: 92vw;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  h1 {
+    color: var(--gold-dark);
+    font-size: 2rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+  }
+  #status {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  #status.online { background: #4caf50; box-shadow: 0 0 8px #4caf50; }
+  #status.listening { background: var(--gold); box-shadow: 0 0 12px var(--gold); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .wakeword {
+    font-size: 1.1rem;
+    color: var(--gold-dark);
+    font-weight: bold;
+    margin: 16px 0;
+    height: 1.4em;
+  }
+  #console {
+    background: #f7f3e8;
+    border: 1px solid var(--gold);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 20px;
+    height: 140px;
+    overflow-y: auto;
+    font-family: 'Menlo', monospace;
+    font-size: 0.85rem;
+    color: var(--ink);
+    text-align: left;
+  }
+  .console-line { margin: 4px 0; padding-bottom: 4px; border-bottom: 1px solid #e8e0c8; }
+  .console-line.user { color: var(--gold-dark); }
+  .console-line.genie { color: #2e7d32; }
+  .console-line.sys { color: var(--muted); font-size: 0.8rem; }
+  .btn {
+    background: var(--gold);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 16px;
+  }
+  .btn:hover { background: var(--gold-dark); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Genie</h1>
+  <div class="subtitle">Your voice assistant — say "Genie" to begin</div>
+  <div id="status"></div><span id="statusText">Offline</span>
+  <div class="wakeword" id="wakeword">—</div>
+  <button class="btn" id="btnConnect">Connect</button>
+  <div id="console">
+    <div class="console-line sys">Ready. Click Connect to start.</div>
+  </div>
+</div>
+<script>
+  const statusDot = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  const wakewordEl = document.getElementById('wakeword');
+  const consoleEl = document.getElementById('console');
+  const btnConnect = document.getElementById('btnConnect');
+
+  let ws = null;
+
+  function log(kind, text) {
+    const div = document.createElement('div');
+    div.className = `console-line ${kind}`;
+    div.textContent = text;
+    consoleEl.appendChild(div);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function setStatus(online, listening) {
+    statusDot.className = listening ? 'listening' : (online ? 'online' : '');
+    statusText.textContent = listening ? 'Listening…' : (online ? 'Online' : 'Offline');
+  }
+
+  function setWakeword(heard) {
+    wakewordEl.textContent = heard ? '🎙 Genie heard' : '—';
+  }
+
+  btnConnect.addEventListener('click', () => {
+    if (ws) { ws.close(); ws = null; btnConnect.textContent = 'Connect'; setStatus(false, false); log('sys', 'Disconnected'); return; }
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${proto}//${window.location.host}/ws/genie`;
+    ws = new WebSocket(url);
+    ws.onopen = () => { setStatus(true, false); btnConnect.textContent = 'Disconnect'; log('sys', 'Connected to Genie'); };
+    ws.onclose = () => { ws = null; setStatus(false, false); btnConnect.textContent = 'Connect'; log('sys', 'Disconnected'); };
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'wakeword') { setWakeword(true); setStatus(true, true); log('sys', 'Wakeword detected'); }
+        else if (msg.type === 'transcript') { log('user', msg.text); setStatus(true, true); }
+        else if (msg.type === 'reply') { log('genie', msg.text); setStatus(true, false); setWakeword(false); }
+        else if (msg.type === 'error') { log('sys', 'Error: ' + msg.text); }
+      } catch (e) { log('sys', ev.data); }
+    };
+    ws.onerror = (err) => { log('sys', 'WebSocket error'); console.error(err); };
+  });
+</script>
+</body>
+</html>

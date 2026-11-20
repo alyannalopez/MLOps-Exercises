@@ -1,2 +1,5 @@
 fd-benchmark/
 fd-benchmark/
+
+# Secrets — never commit
+.env
